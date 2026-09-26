@@ -5,7 +5,8 @@ the Dalmatian coast, canyon to old town to woods to shore, and learns at his
 own front gate that the dog was leading him home the whole time.
 
 Full color, flat-shaded, one continuous day where color is the clock.
-Target: 40 to 50 minutes, four chapters, desktop and mobile.
+Target: 40 to 50 minutes, four chapters, desktop and mobile. Current build:
+the whole day plays end to end in about 15 to 20 minutes (see D41).
 
 ## Source of truth
 
@@ -16,7 +17,8 @@ Read these before writing code. They outrank your own judgment.
 | `docs/story.md` | Narrative, the four rules of the dog, chapters, what is never stated |
 | `docs/game-design.md` | Verbs, the whistle, the dog actor, tracking, camera, manifest schema |
 | `docs/art-direction.md` | Every visual decision, palettes, the red rule |
-| `docs/quality-bar.md` | Gates, critic loops, budgets, the red audit, definition of done |
+| `docs/quality-bar.md` | Budgets, the red audit (gates superseded by D47) |
+| `docs/decisions.md` | Rulings, including the rebuild (D41 onward) |
 
 ## Laws of the project
 
@@ -40,9 +42,10 @@ system. If a playtester is lost, fix the staging, never add UI.
 the world. If a moment seems to need words, the spatial design is failing. Fix
 the space or ask.
 
-**Chapters are data, not code.** The engine reads JSON manifests. Chapters 2
-through 4 must require zero new engine code. If a chapter forces an engine
-change, that is an engine bug. Fix the engine.
+**Chapters are data, not code.** The engine reads JSON manifests in
+`src/data/`. A new moment should be expressible as data; if it forces an
+engine change, make the change general (a new node type, a new prop kind),
+never a chapter special case.
 
 **Mobile is not a port.** Every chapter completable on a touchscreen with one
 thumb, in portrait, and fully comprehensible with sound off. Test at every
@@ -55,20 +58,49 @@ action. A fourth verb is a design change requiring the human.
 
 ## Stack
 
-Vite, React Three Fiber, Zustand, deployed to Vercel as a standalone app.
+Vite, React Three Fiber (as a canvas host; the engine is plain three.js),
+Zustand for UI state, deployed to Vercel as a standalone app. No asset files:
+every mesh, color and sound is generated at runtime from code and data.
 
-## Build order
+## Where things live
 
-One gate per working session. Do not advance past a gate without the human.
-Gates are defined in `docs/quality-bar.md`.
+| To change... | Edit |
+|---|---|
+| The coast itself: coastline, hills, the canyon, rivers, the road | `src/data/world.json` |
+| A chapter: its route, the dog's stops, light by progress, townsfolk, framed shots | `src/data/ch1.json` .. `ch4.json` |
+| Every color in the world | `src/engine/palette.ts` |
+| How light and fog look | `src/engine/materials.ts` (shader), plus `lighting` in each chapter |
+| What the dog does at each node type | `src/engine/dog.ts` |
+| Props (pines, houses, boats, the bell tower) | `src/engine/kit.ts` |
+| Where trees and houses get placed | `src/engine/dress.ts` |
+| Camera, whistle, chapter flow, the ending | `src/engine/game.ts` |
+| Title, cards, legend, touch controls, menu | `src/hud/Hud.tsx`, `src/hud/hud.css` |
+| The end-of-chapter map | `src/hud/MapScreen.tsx` |
+| Sound | `src/engine/audio.ts` |
 
-1. Grey box Chapter 1: walking, the dog actor on a real route, the whistle loop
-2. Art bible: one canyon-morning scene that nails the look
-3. The two characters: gaits, prints, node vocabulary, camera
-4. Chapter engine: manifests, menu, save, route logging, the map screen
-5. Chapter 1 complete, end to end, on a physical phone
-6. Chapters 2 to 4 as manifests only
-7. Performance and polish
+Coordinates: meters, x east, z south (the sea is south). Path points are
+`[x, z, y, width]`; 3D positions are `[x, y, z]`; dog nodes and triggers are
+plan `[x, z]` / `[x, z, radius]`. Light keyframes are keyed to how far along
+the dog's route the boy has come (0 to 1), never to clock time.
+
+Files under `src/App.tsx`, `src/art`, `src/components`, `src/game`, `src/ui`,
+`src/audio` are the pre-rebuild engine, unused, kept until the human decides
+to delete them.
+
+## Testing
+
+Run `npm run dev`. `?ch=0..3` jumps to a chapter. In the browser console
+`__game.autopilot(seconds)` walks the boy along the dog's route in simulated
+time and returns a log of the dog's modes, which is how chapter flow is checked
+without playing it by hand. `__game.simulate(seconds)` advances time.
+`npm run red-audit` must pass before any push. `npm run build` must pass.
+
+## Working rhythm
+
+Gates are retired (see `docs/decisions.md`, D41 to D47). Each session: play
+the whole day, find the weakest moment, fix it, re-check the red audit and
+one screenshot per chapter at desktop and portrait. Report actual numbers at
+any performance claim.
 
 ## Constraints
 

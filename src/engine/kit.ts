@@ -103,8 +103,8 @@ export function umbrellaPine(r: R) {
     const y = h * 0.86 + (r() - 0.3) * 0.8
     const x = topX + Math.cos(a) * d
     const z = topZ + Math.sin(a) * d
-    k.add(ico(1), PAL.pineCanopy, T(x, y, z, 0, r() * 3, 0, s, s * 0.34, s), { tone: 0.82 + r() * 0.12, jitter: 0.25 })
-    k.add(ico(0), PAL.pineCanopyLight, T(x, y + s * 0.12, z, 0, r() * 3, 0, s * 0.75, s * 0.22, s * 0.75), { tone: 0.9 + r() * 0.15 })
+    k.add(ico(0), PAL.pineCanopy, T(x, y, z, 0, r() * 3, 0, s, s * 0.36, s), { tone: 0.82 + r() * 0.12, jitter: 0.3 })
+    if (b % 2 === 0) k.add(ico(0), PAL.pineCanopyLight, T(x, y + s * 0.12, z, 0, r() * 3, 0, s * 0.75, s * 0.22, s * 0.75), { tone: 0.9 + r() * 0.15 })
   }
   return k.build()
 }
@@ -114,7 +114,7 @@ export function cypress(r: R) {
   const h = 6 + r() * 4
   const w = 1.1 + r() * 0.4
   k.add(cyl(5), PAL.pineTrunk, T(0, 0, 0, 0, 0, 0, 0.25, 1.2, 0.25))
-  k.add(ico(1), PAL.cypress, T(0, h * 0.45, 0, 0, r() * 3, 0, w, h * 0.95, w), { jitter: 0.12, tone: 0.9 + r() * 0.15 })
+  k.add(ico(0), PAL.cypress, T(0, h * 0.45, 0, 0, r() * 3, 0, w * 1.1, h * 0.95, w * 1.1), { jitter: 0.1, tone: 0.9 + r() * 0.15 })
   k.add(cone(6), PAL.cypress, T(0, h * 0.72, 0, 0, r() * 3, 0, w * 0.7, h * 0.34, w * 0.7), { tone: 1.05 })
   return k.build()
 }
@@ -127,7 +127,7 @@ export function olive(r: R) {
   for (let b = 0; b < 4; b++) {
     const a = b * 1.7 + r()
     const s = 1.5 + r() * 0.9
-    k.add(ico(1), PAL.olive, T(Math.cos(a) * 1.1, h + r() * 0.8, Math.sin(a) * 1.1, 0, 0, 0, s * 1.3, s * 0.8, s * 1.3), {
+    k.add(ico(0), PAL.olive, T(Math.cos(a) * 1.1, h + r() * 0.8, Math.sin(a) * 1.1, 0, 0, 0, s * 1.3, s * 0.8, s * 1.3), {
       jitter: 0.2,
       tone: 0.85 + r() * 0.25,
     })

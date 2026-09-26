@@ -55,7 +55,7 @@ export class Birds {
     b.kind = kind
     const m = this.mats[kind]
     b.g.children.forEach((c) => ((c as THREE.Mesh).material = m))
-    const s = kind === 'gulls' ? 2.2 : kind === 'pigeons' ? 1.5 : 1
+    const s = kind === 'gulls' ? 3.6 : kind === 'pigeons' ? 2.8 : 2.4
     b.g.scale.setScalar(s)
   }
 
@@ -71,14 +71,14 @@ export class Birds {
       b.active = true
       b.perched = false
       b.t = 0
-      b.life = 4.5 + Math.random() * 2
+      b.life = 5.5 + Math.random() * 2.5
       b.g.visible = true
       const a = Math.random() * Math.PI * 2
       const r = Math.random() * 3
       b.g.position.set(x + Math.cos(a) * r, y + 0.3 + Math.random() * 1.5, z + Math.sin(a) * r)
       const spread = (Math.random() - 0.5) * 1.4
       const dir = away.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), spread)
-      b.vel.set(dir.x * (3 + Math.random() * 2), 3 + Math.random() * 2.5, dir.z * (3 + Math.random() * 2))
+      b.vel.set(dir.x * (2.5 + Math.random() * 2), 4 + Math.random() * 2.5, dir.z * (2.5 + Math.random() * 2))
       if (++n >= count) break
     }
   }
@@ -91,7 +91,7 @@ export class Birds {
       const f = Math.sin(b.flap) * (b.kind === 'gulls' ? 0.6 : 0.9)
       b.wl.rotation.z = f
       b.wr.rotation.z = -f
-      b.vel.y = Math.max(b.vel.y - dt * 0.6, 1.2)
+      b.vel.y = Math.max(b.vel.y - dt * 0.5, 1.6)
       b.vel.x += (Math.random() - 0.5) * dt * 2
       b.vel.z += (Math.random() - 0.5) * dt * 2
       b.g.position.addScaledVector(b.vel, dt)

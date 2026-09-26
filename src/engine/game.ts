@@ -64,6 +64,7 @@ export class Game {
   post: Post
   world: World
   sun = new THREE.DirectionalLight(0xffffff, 1)
+  sky!: THREE.Mesh
   boy = new Boy()
   dog = new DogActor()
   birds = new Birds()
@@ -137,7 +138,8 @@ export class Game {
     onProgress?.(0.5)
     const s = this.scene
     bindHeightMap(this.world)
-    s.add(buildSky())
+    this.sky = buildSky()
+    s.add(this.sky)
     s.add(buildTerrain(this.world))
     s.add(buildPaths(this.world))
     s.add(buildSea(this.world))
@@ -712,7 +714,7 @@ export class Game {
         if (Math.hypot(this.px - zx, this.pz - zz) < zr) {
           const [ax, ay, az] = fs.answerAt
           audio.bark(ax, ay, az, { echo: true })
-          this.birds.lift(ax, ay, az, 'pigeons', 8)
+          this.birds.lift(ax, ay, az, 'pigeons', 11)
           audio.birds(ax, ay, az, 'pigeons')
           return
         }
@@ -728,7 +730,7 @@ export class Game {
     audio.bark(x, y, z, { echo: ch.whistle === 'misleading' })
     const kind = ch.bed === 'town' ? 'pigeons' : ch.bed === 'shore' ? 'gulls' : 'small'
     if (this.darkness < 0.55) {
-      this.birds.lift(x, y + 2, z, kind, 7, new THREE.Vector3(this.px, 0, this.pz))
+      this.birds.lift(x, y + 2, z, kind, 11, new THREE.Vector3(this.px, 0, this.pz))
       audio.birds(x, y, z, kind)
     }
   }
@@ -981,6 +983,8 @@ export class Game {
         wantFov = this.cutCam.fov * (portrait ? 1.35 : 1)
       }
     }
+    // a framed camera can never sit inside the land
+    wantPos.y = Math.max(wantPos.y, this.world.ground(wantPos.x, wantPos.z) + 1.4)
     if (this.snapCamera) {
       this.camPos.copy(wantPos)
       this.camLook.copy(wantLook)
@@ -994,6 +998,13 @@ export class Game {
     }
     cam.position.copy(this.camPos)
     cam.lookAt(this.camLook)
+    // nothing past the fog is drawn; the sky rides with the camera
+    const far = Math.max(360, U.uFogFar.value * 1.05)
+    if (Math.abs(cam.far - far) > far * 0.04) {
+      cam.far = far
+      cam.updateProjectionMatrix()
+    }
+    this.sky.position.copy(cam.position)
     if (Math.abs(cam.fov - this.camFov) > 0.01) {
       cam.fov = this.camFov
       cam.updateProjectionMatrix()

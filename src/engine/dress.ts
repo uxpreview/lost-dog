@@ -10,7 +10,7 @@ import * as K from './kit'
 import { PAL } from './palette'
 import { worldMaterial } from './materials'
 
-const CHUNK = 200
+const CHUNK = 120
 
 interface Inst {
   x: number
@@ -41,12 +41,12 @@ export function dress(w: World, quality: number): THREE.Group {
 
   const variants: Record<string, { geo: THREE.BufferGeometry; shadow: boolean; mat: THREE.Material }> = {}
   const vr = rng(99)
-  for (let i = 0; i < 5; i++) variants['pine' + i] = { geo: K.umbrellaPine(vr), shadow: true, mat: matTree }
-  for (let i = 0; i < 3; i++) variants['cypress' + i] = { geo: K.cypress(vr), shadow: true, mat: matTree }
-  for (let i = 0; i < 3; i++) variants['olive' + i] = { geo: K.olive(vr), shadow: true, mat: matTree }
-  for (let i = 0; i < 4; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matStatic }
-  for (let i = 0; i < 2; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matStatic }
-  for (let i = 0; i < 4; i++) variants['rock' + i] = { geo: K.rock(vr, i % 2 ? PAL.limeA : PAL.rockGrey), shadow: true, mat: matStatic }
+  for (let i = 0; i < 3; i++) variants['pine' + i] = { geo: K.umbrellaPine(vr), shadow: true, mat: matTree }
+  for (let i = 0; i < 2; i++) variants['cypress' + i] = { geo: K.cypress(vr), shadow: true, mat: matTree }
+  for (let i = 0; i < 2; i++) variants['olive' + i] = { geo: K.olive(vr), shadow: true, mat: matTree }
+  for (let i = 0; i < 3; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matStatic }
+  for (let i = 0; i < 1; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matStatic }
+  for (let i = 0; i < 2; i++) variants['rock' + i] = { geo: K.rock(vr, i % 2 ? PAL.limeA : PAL.rockGrey), shadow: false, mat: matStatic }
 
   const pick = (base: string, n: number) => base + Math.floor(r() * n)
   const TOWN: [number, number] = [-280, -70]
@@ -84,32 +84,32 @@ export function dress(w: World, quality: number): THREE.Group {
         if (h > 28 && wall < 0.3 && slope < 0.6) {
           // plateau pines cluster along the rim, so the canyon has a skyline
           const nearRim = smoothstep(0.02, 0.0, wall) < 1 ? 1 : 0.6
-          if (u < 0.055 * nearRim) v = pick('pine', 5)
-          else if (u < 0.16) v = pick('shrub', 4)
-          else if (u < 0.19) v = pick('rock', 4)
+          if (u < 0.055 * nearRim) v = pick('pine', 3)
+          else if (u < 0.16) v = pick('shrub', 3)
+          else if (u < 0.19) v = pick('rock', 2)
         } else if (wall > 0.25) {
-          if (slope < 1.4 && u < 0.05) v = pick('shrub', 4)
-          else if (u < 0.065 && slope < 0.9) v = pick('pine', 5), (s *= 0.7)
+          if (slope < 1.4 && u < 0.05) v = pick('shrub', 3)
+          else if (u < 0.065 && slope < 0.9) v = pick('pine', 3), (s *= 0.7)
         } else {
-          if (u < 0.05) v = pick('shrub', 4)
-          else if (u < 0.08) v = pick('rock', 4)
-          else if (u < 0.092) (v = pick('pine', 5)), (needClear = 3.5)
+          if (u < 0.05) v = pick('shrub', 3)
+          else if (u < 0.08) v = pick('rock', 2)
+          else if (u < 0.092) (v = pick('pine', 3)), (needClear = 3.5)
         }
       } else if (woods) {
-        if (u < 0.3 * quality ** 0.3) (v = pick('pine', 5)), (needClear = 2.6), (s = 0.85 + r() * 0.5)
-        else if (u < 0.42) v = pick('shrub', 4)
-        else if (u < 0.45) v = pick('rock', 4)
+        if (u < 0.3 * quality ** 0.3) (v = pick('pine', 3)), (needClear = 2.6), (s = 0.85 + r() * 0.5)
+        else if (u < 0.42) v = pick('shrub', 3)
+        else if (u < 0.45) v = pick('rock', 2)
       } else if (shore) {
-        if (h > 2.2 && u < 0.1) v = pick('grass', 2)
-        else if (h > 5 && u < 0.14) v = pick('shrub', 4)
-        else if (u < 0.155 && h > 6) (v = pick('olive', 3)), (needClear = 2.5)
-        else if (dc < 12 && u < 0.19) v = pick('rock', 4)
+        if (h > 2.2 && u < 0.1) v = pick('grass', 1)
+        else if (h > 5 && u < 0.14) v = pick('shrub', 3)
+        else if (u < 0.155 && h > 6) (v = pick('olive', 2)), (needClear = 2.5)
+        else if (dc < 12 && u < 0.19) v = pick('rock', 2)
       } else if (hillside) {
-        if (u < 0.1) v = pick('shrub', 4)
-        else if (u < 0.125) (v = pick('olive', 3)), (needClear = 2.5)
-        else if (u < 0.14) (v = pick('pine', 5)), (needClear = 3)
-        else if (u < 0.15) (v = pick('cypress', 3)), (needClear = 2.5)
-        else if (u < 0.165) v = pick('rock', 4)
+        if (u < 0.1) v = pick('shrub', 3)
+        else if (u < 0.125) (v = pick('olive', 2)), (needClear = 2.5)
+        else if (u < 0.14) (v = pick('pine', 3)), (needClear = 3)
+        else if (u < 0.15) (v = pick('cypress', 2)), (needClear = 2.5)
+        else if (u < 0.165) v = pick('rock', 2)
       }
       if (!v) continue
       if (v.startsWith('rock')) needClear = 0.8
@@ -343,7 +343,7 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
         g.applyMatrix4(K.T(px, y - 0.05, pz, 0, r() * 6, 0))
         geos.push(g)
       }
-      if (half < 2 && r() < 0.28) {
+      if (half < 2 && r() < 0.28 && Math.hypot(x - t.center[0], z - t.center[1]) < t.radius * 0.8) {
         const len = half * 2 + 1.2
         const g = K.washingLine(len, r)
         g.applyMatrix4(K.T(x, y + 5.2 + r() * 1.5, z, 0, Math.atan2(-tz, tx) + Math.PI / 2, 0))
@@ -358,7 +358,7 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
       const ang = r() * Math.PI * 2
       const px = ax + Math.cos(ang) * (ar - 1.2)
       const pz = az + Math.sin(ang) * (ar - 1.2)
-      sc.add('cypress' + Math.floor(r() * 3), { x: px, y: (a.y ?? w.ground(px, pz)) - 0.1, z: pz, ry: r() * 6, s: 0.9 })
+      sc.add('cypress' + Math.floor(r() * 2), { x: px, y: (a.y ?? w.ground(px, pz)) - 0.1, z: pz, ry: r() * 6, s: 0.9 })
     }
   }
 

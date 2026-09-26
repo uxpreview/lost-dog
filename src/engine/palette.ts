@@ -38,8 +38,8 @@ export const PAL = {
   awningOchre: '#D9A441',
   awningCream: '#F0E4C8',
   // woods
-  needles: '#957650',
-  needlesDark: '#76603F',
+  needles: '#AE8C5E',
+  needlesDark: '#8C7250',
   moss: '#747A48',
   pineCanopy: '#4F6B4E',
   pineCanopyLight: '#65805A',

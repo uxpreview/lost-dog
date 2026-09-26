@@ -231,7 +231,9 @@ export class DogActor {
         speedWant = this.boundT > 0 ? BOUND : TROT
         if (dBoy < 9 && this.boundT <= 0) speedWant = TROT * 1.12
         pose = this.boundT > 0.5 ? 'bound' : 'trot'
-        this.s = Math.min(targetS, this.s + this.speed * dt)
+        // his place on the route never runs ahead of his body
+        const bodyS = c.line.project(this.x, this.z)
+        this.s = Math.min(targetS, this.s + this.speed * dt, bodyS + 4)
         moveTo = this.linePoint(c, this.s + 1.5)
         // constant look-backs while trotting (rule 3)
         this.lookTimer -= dt
@@ -256,6 +258,16 @@ export class DogActor {
       }
       case 'wait': {
         const nd = n.node
+        // walk the last meters to his mark before settling
+        const mark: [number, number] = [nd.at[0], nd.at[1]]
+        const toMark = Math.hypot(mark[0] - this.x, mark[1] - this.z)
+        if (toMark > 0.6 && nd.type !== 'join' && nd.type !== 'eyes') {
+          moveTo = mark
+          speedWant = Math.min(TROT, 1 + toMark * 1.5)
+          pose = 'trot'
+          this.holdT = 0
+          break
+        }
         this.holdT += dt
         faceBoy = true
         lookAtBoy = true

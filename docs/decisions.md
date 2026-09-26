@@ -632,3 +632,68 @@ so other chapters ask for their own. Nothing is sampled or sourced. The game
 remains fully playable with sound off; the audio adds nothing the picture does
 not already say. Audio starts on the first gesture, which is the same input
 that dismisses the legend.
+
+---
+
+# The rebuild (September 2026)
+
+After four gates the project had one partial chapter, 13k lines of engine, and
+none of the ending, which is the only reason the game exists. The human asked
+for one more try with licence to change anything. These rulings supersede
+anything above they contradict. The story, the four rules of the dog, the red
+rule, the no-wayfinding-UI rule and the whistle are unchanged.
+
+## D41 — Whole day first, then depth
+
+**Ruling:** all four chapters and the ending exist and play end to end before
+any one chapter is polished further. Critical path is now about 12 minutes of
+straight walking (ch1 ~2.5, ch2 ~3.7, ch3 ~2.5, ch4 ~2 plus the ending), 15 to
+20 with the opening, exploring and whistling. The 40 to 50 minute target is
+reached later by lengthening routes and adding optional space in data, not
+by building more engine. A complete short day that lands its ending is worth
+more than a quarter of a long one.
+
+## D42 — One continuous world
+
+The four chapters are stretches of one coast in real meters (`src/data/world.json`),
+not four scenes. The end-of-day map is therefore a truthful top-down view of
+where the boy walked, the town seen from the canyon rim is the actual town,
+and the woods-to-shore transition has no load and no cut. The light changes
+per chapter behind the map screen; ch3 into ch4 is seamless.
+
+## D43 — Real shadows (supersedes "no dynamic shadows")
+
+One shadow-mapped light (sun, then moon) following the boy. "Shade is a place"
+in the noon town and "long soft shadows" in the canyon were not achievable
+with blob shadows. Everything else in the technique list stands: flat shading,
+vertex colours from the palette, one light plus ambient, fog as colour, no
+outlines, one grain pass.
+
+## D44 — Routes are corridors, the dog's route is a line
+
+Walkability is route corridors plus areas per chapter (plazas, beach). The
+dog's authored nodes are placed by plan position and projected onto the
+chapter's main line. The camera looks along the route, i.e. where the dog went,
+and swings to the open side on cliff paths. Chapter seams stay walkable until
+the boy is 30 m into the new chapter.
+
+## D45 — The canyon climb follows the side stream
+
+The switchbacks cut into the west wall read as a trench no camera could frame.
+The route now climbs the side stream's gully (a second valley in world data)
+to the plateau, and the town opens up at the rim.
+
+## D46 — Decisions made on the [OPEN] items, all reversible in data
+
+- The door at home opens on a dark silhouette in warm light, no face, no voice
+  (the story's recommendation).
+- No narration. The dog has no name anywhere.
+- "Town knows this dog" moments: one so far (the old woman at the upper
+  square). The story recommends three with one missable; still owed.
+- The boy has eyes only.
+
+## D47 — Process
+
+Gates and critic loops are retired as the unit of work. Each session plays the
+whole game (autopilot plus screenshots, see "Testing" in CLAUDE.md), picks the
+weakest moment, and fixes it. Performance is measured, never asserted.

@@ -165,7 +165,10 @@ export function buildPaths(w: World): THREE.Mesh {
     // on the beach the whole sand is the path; a ribbon would read as a road
     if (ch.surface === 'sand') continue
     const [ca, cb] = surfaceColor[ch.surface] ?? surfaceColor.gravel
-    addRibbon(w, wp.line, ca, cb, pos, col, idx, ch.surface === 'stone')
+    // paving only inside the town; outside its walls a paved chapter walks on dirt
+    const town = ch.town
+    const inTown = town ? (x: number, z: number) => Math.hypot(x - town.center[0], z - town.center[1]) < town.radius * 0.92 : () => false
+    addRibbon(w, wp.line, ca, cb, pos, col, idx, ch.surface === 'stone', inTown)
   }
   const geo = new THREE.BufferGeometry()
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
@@ -188,9 +191,9 @@ function landAt(w: World, x: number, z: number): RGB {
   return terrainColor(w, k, x, z, Math.hypot(hx, hz) / (2 * w.cell))
 }
 
-function addRibbon(w: World, line: Polyline, ca: RGB, cb: RGB, pos: number[], col: number[], idx: number[], paved: boolean) {
+function addRibbon(w: World, line: Polyline, ca0: RGB, cb0: RGB, pos: number[], col: number[], idx: number[], pavedChapter: boolean, inTown: (x: number, z: number) => boolean) {
   const STEP = 1
-  const ACROSS = paved ? [-1, -0.92, -0.3, 0.3, 0.92, 1] : [-1, -0.7, 0, 0.7, 1]
+  const ACROSS = [-1, -0.92, -0.6, -0.3, 0.3, 0.6, 0.92, 1]
   let prevOk = false
   let base = 0
   for (let s = 0; s <= line.length; s += STEP) {
@@ -204,6 +207,9 @@ function addRibbon(w: World, line: Polyline, ca: RGB, cb: RGB, pos: number[], co
     // skip where the route bridges (log, plank) or runs under a river (the ford keeps it)
     const g = w.ground(x, z)
     const ok = g > y - 0.6
+    const paved = pavedChapter && inTown(x, z)
+    const ca = pavedChapter && !paved ? C.trail : ca0
+    const cb = pavedChapter && !paved ? C.trailEdge : cb0
     if (ok) {
       const row = pos.length / 3
       for (const a of ACROSS) {
@@ -333,7 +339,7 @@ export function buildRivers(w: World): THREE.Mesh {
 }
 
 export function buildSky(): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.SphereGeometry(1500, 32, 16), skyMaterial())
+  const m = new THREE.Mesh(new THREE.SphereGeometry(300, 32, 16), skyMaterial())
   m.frustumCulled = false
   m.renderOrder = -1
   m.name = 'sky'

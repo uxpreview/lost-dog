@@ -72,9 +72,9 @@
     },
     {
       "type": "gate",
-      "at": [-880, 15.2],
+      "at": [-879.4, 16.4],
       "pose": "sit",
-      "release": 3.2
+      "release": 5.2
     }
   ],
   "cameras": [
