@@ -550,8 +550,9 @@ export class Game {
     const cy = Math.cos(this.camYaw)
     const sy = Math.sin(this.camYaw)
     // forward is the camera's view direction on the ground
-    let wx = mx * cy + mz * sy
-    let wz = -mx * sy + mz * cy
+    // camera right on the ground is (-cos, sin) for a camera facing (sin, cos)
+    let wx = -mx * cy + mz * sy
+    let wz = mx * sy + mz * cy
     const mag = Math.min(1, Math.hypot(mx, mz))
     const surface = this.world.surfaceAt(this.px, this.pz, this.walk)
     const slow = surface === 'water' ? 0.62 : surface === 'wood' ? 0.7 : 1
@@ -1043,7 +1044,7 @@ export class Game {
       const wz = l < 0.8 ? 0 : wz0 / l
       const cy = Math.cos(this.camYaw)
       const sy = Math.sin(this.camYaw)
-      input.move.x = wx * cy - wz * sy
+      input.move.x = -wx * cy + wz * sy
       input.move.z = wx * sy + wz * cy
       this.update(dt)
       const m = `${this.mode}/${this.dog.mode}/${this.dog.ni}`

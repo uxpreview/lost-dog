@@ -97,6 +97,9 @@ without playing it by hand. `__game.simulate(seconds)` advances time.
 
 ## Working rhythm
 
+**Start here:** `docs/next-session.md` holds the prioritized plan from the
+latest playtest.
+
 Gates are retired (see `docs/decisions.md`, D41 to D47). Each session: play
 the whole day, find the weakest moment, fix it, re-check the red audit and
 one screenshot per chapter at desktop and portrait. Report actual numbers at
