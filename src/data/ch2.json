@@ -166,10 +166,29 @@
   },
   "dog": [
     {
+      "type": "business",
+      "at": [-108.5, -297.5],
+      "act": "sniff"
+    },
+    {
+      "type": "double-back",
+      "at": [-119, -244]
+    },
+    {
       "type": "perch",
       "at": [-150, -208],
       "release": 20,
       "pose": "stand"
+    },
+    {
+      "type": "business",
+      "at": [-179.6, -178.2],
+      "act": "cat",
+      "prop": [-180.6, -176.6]
+    },
+    {
+      "type": "invite",
+      "at": [-194, -146]
     },
     {
       "type": "perch",
@@ -178,10 +197,24 @@
       "pose": "stand"
     },
     {
+      "type": "business",
+      "at": [-238, -78],
+      "act": "sniff"
+    },
+    {
+      "type": "double-back",
+      "at": [-245, -40]
+    },
+    {
       "type": "perch",
       "at": [-262, 4],
       "release": 14,
       "pose": "sit"
+    },
+    {
+      "type": "business",
+      "at": [-280, 24],
+      "act": "sniff"
     },
     {
       "type": "perch",
@@ -190,11 +223,26 @@
       "pose": "stand"
     },
     {
+      "type": "business",
+      "at": [-357.5, -19],
+      "act": "cat",
+      "prop": [-358.8, -17.4]
+    },
+    {
+      "type": "invite",
+      "at": [-361, -65]
+    },
+    {
       "type": "visit",
       "at": [-372, -104],
       "npc": "old-woman",
       "hold": 4.5,
       "release": 22
+    },
+    {
+      "type": "business",
+      "at": [-387, -146],
+      "act": "sniff"
     },
     {
       "type": "nearmiss",
@@ -406,6 +454,145 @@
       "fogFar": 760,
       "stars": 0,
       "moon": 0
+    }
+  ],
+  "life": [
+    {
+      "_name": "the cat on the step",
+      "kind": "cat",
+      "at": [-180.6, -176.6],
+      "jump": [-182.2, -171, 0]
+    },
+    {
+      "_name": "the cat by the chapel stair",
+      "kind": "cat",
+      "at": [-358.8, -17.4],
+      "jump": [-361.2, -25, 0]
+    }
+  ],
+  "ambient": [
+    {
+      "idle": "sweep",
+      "along": [160, -1]
+    },
+    {
+      "idle": "window",
+      "along": [176, 1]
+    },
+    {
+      "idle": "sit",
+      "along": [198, -1]
+    },
+    {
+      "idle": "laundry",
+      "along": [214, 1]
+    },
+    {
+      "idle": "chat",
+      "along": [236, -1]
+    },
+    {
+      "_name": "market: a stallholder, two neighbours, a card table",
+      "idle": "stand",
+      "at": [-231, -101],
+      "face": [-224, -108]
+    },
+    {
+      "idle": "chat",
+      "at": [-217, -116],
+      "face": [-224, -108]
+    },
+    {
+      "idle": "cards",
+      "at": [-233, -114],
+      "face": [-224, -108]
+    },
+    {
+      "idle": "window",
+      "along": [290, 1]
+    },
+    {
+      "idle": "sleep",
+      "along": [318, -1]
+    },
+    {
+      "idle": "water",
+      "along": [352, 1]
+    },
+    {
+      "idle": "window",
+      "along": [372, -1]
+    },
+    {
+      "_name": "the quay",
+      "idle": "mend",
+      "at": [-318, 31],
+      "face": [-318, 40]
+    },
+    {
+      "idle": "nets",
+      "at": [-289, 31.5],
+      "face": [-289, 40]
+    },
+    {
+      "idle": "chat",
+      "at": [-252, 28],
+      "face": [-252, 36]
+    },
+    {
+      "idle": "stand",
+      "at": [-334, 30],
+      "face": [-334, 60]
+    },
+    {
+      "idle": "sweep",
+      "along": [498, 1]
+    },
+    {
+      "idle": "window",
+      "along": [518, -1]
+    },
+    {
+      "idle": "sit",
+      "along": [546, 1]
+    },
+    {
+      "idle": "laundry",
+      "along": [562, -1]
+    },
+    {
+      "_name": "the upper square",
+      "idle": "chat",
+      "at": [-383, -113],
+      "face": [-376, -108]
+    },
+    {
+      "idle": "sit",
+      "at": [-373, -113],
+      "face": [-370, -118]
+    },
+    {
+      "idle": "window",
+      "along": [642, -1]
+    },
+    {
+      "idle": "sweep",
+      "along": [668, 1]
+    },
+    {
+      "_name": "off the route",
+      "idle": "sit",
+      "at": [-312, -51],
+      "face": [-306, -58]
+    },
+    {
+      "idle": "laundry",
+      "at": [-158, -127],
+      "face": [-156, -122]
+    },
+    {
+      "idle": "window",
+      "along": [40, 1, 1]
     }
   ]
 }

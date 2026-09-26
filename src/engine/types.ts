@@ -37,6 +37,14 @@ export type DogNode =
   | { type: 'join'; at: P2; release: number; pose: 'sit' }
   | { type: 'gate'; at: P2; release: number; pose: 'sit' }
   | { type: 'nearmiss'; at: P2; approach: number; contact: boolean; hold: number; path: P2[] }
+  // business: something a dog does on his way, without waiting for anyone
+  | { type: 'business'; at: P2; act: BusinessAct; dur?: number; prop?: P2 }
+  // invite: a play-bow and a bark when the boy has fallen behind, then on
+  | { type: 'invite'; at: P2; far?: number }
+  // double-back: he comes back toward the boy a few meters, checks, goes on
+  | { type: 'double-back'; at: P2; back?: number }
+
+export type BusinessAct = 'drink' | 'dig' | 'sniff' | 'roll' | 'shake' | 'butterfly' | 'cat'
 
 export interface Area {
   circle?: [number, number, number]
@@ -75,6 +83,15 @@ export interface Chapter {
   falseSources?: { zone: [number, number, number]; answerAt: P3; cue: string }[]
   cameras?: { trigger: [number, number, number]; position: P3; lookAt: P3; fov?: number }[]
   props?: Record<string, unknown>[]
+  life?: import('./life').LifeDef[]
+  /** the town's ambient people: at a plan point, or along a walk (s meters, side -1/1, branch index or main) */
+  ambient?: {
+    idle: import('./characters').FolkIdle
+    at?: P2
+    face?: P2
+    along?: [number, number, number?]
+    pair?: boolean
+  }[]
   town?: {
     center: P2
     radius: number

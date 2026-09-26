@@ -13,10 +13,11 @@ import { World } from './world'
 import { Polyline } from './path'
 import { U } from './materials'
 import { buildTerrain, buildPaths, buildSea, buildRivers, buildSky, bindHeightMap } from './terrain'
-import { dress } from './dress'
-import { Boy, Folk, camQuat } from './characters'
+import { dress, duckLines, brushPatches, houseFronts } from './dress'
+import { Boy, Folk, camQuat, folkIdle, type FolkIdle } from './characters'
 import { DogActor, type DogCtx } from './dog'
 import { Birds, Prints, Rings, Motes } from './fx'
+import { Life } from './life'
 import { Post } from './post'
 import { input, clearKeys } from './input'
 import { useUI } from './store'
@@ -25,6 +26,8 @@ import { audio } from './audio'
 import { angleDiff, clamp, damp, dampAngle, lerp, smoothstep } from './noise'
 import * as K from './kit'
 import { worldMaterial, glowMaterial } from './materials'
+import { PAL } from './palette'
+import * as BGU from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 
 export const CHAPTERS = [ch1, ch2, ch3, ch4] as unknown as Chapter[]
 
@@ -43,6 +46,17 @@ interface FolkRt {
   cool: number
   runS: number
   run?: Polyline
+}
+
+interface AmbientRt {
+  rigs: Folk[]
+  idle: FolkIdle
+  x: number
+  z: number
+  yaw: number
+  t: number
+  looked: boolean
+  ci: number
 }
 
 interface DistRt {
@@ -72,7 +86,11 @@ export class Game {
   feet = new Prints(false, 160)
   rings = new Rings()
   motes = new Motes()
+  life: Life
+  /** small things scheduled in game time (a cat's answer after the dog's nose) */
+  private later: { t: number; fn: () => void }[] = []
   folk: FolkRt[] = []
+  ambient: AmbientRt[] = []
   dist: DistRt[] = []
   lines: Polyline[]
   ci = 0
@@ -127,6 +145,22 @@ export class Game {
   private cardTimer = 0
   private eyesShown = false
   private stepAudioT = 0
+  // traversal: what the ground under him is doing, and the stones he hops
+  private hopLines: { ax: number; az: number; bx: number; bz: number; y: number; n: number }[] = []
+  private trav = { balance: 0, wade: 0, climb: 0, descend: 0, duck: 0, push: 0 }
+  private onStone = 0
+  private hopY = 0
+  private breathT = 0
+  private rustleT = 0
+  /** how long the dog has been out of sight, for the pace */
+  private unseenT = 0
+  private surge = 1
+  /** Dev: every moment the player could notice, for the pacing metric (see beatReport). */
+  beats: { t: number; kind: string }[] = []
+  chapterT0 = 0
+  private beatNodes = new Set<object>()
+  private beatLast = new Map<string, number>()
+  prevReport: ReturnType<Game['beatReport']> | null = null
 
   constructor(quality: number, onProgress?: (p: number) => void) {
     this.quality = quality
@@ -149,7 +183,17 @@ export class Game {
     onProgress?.(0.9)
     this.buildHome()
     this.buildFolk()
+    this.buildAmbient()
     this.buildDisturbances()
+    for (const ch of CHAPTERS)
+      for (const p of ch.props ?? []) {
+        if (p.kind !== 'stones') continue
+        const [ax, ay, az] = p.from as number[]
+        const [bx, , bz] = p.to as number[]
+        this.hopLines.push({ ax, az, bx, bz, y: ay + 0.1, n: (p.count as number) ?? 6 })
+      }
+    this.life = new Life(this.world, CHAPTERS)
+    s.add(this.life.group)
     s.add(this.boy.root, this.dog.rig.root, this.birds.group, this.paws.mesh, this.feet.mesh, this.rings.group, this.motes.points)
     this.boy.root.traverse((o) => (o.castShadow = true))
     // the sun (or moon): shadows only; the shader takes its color from U
@@ -265,6 +309,136 @@ export class Game {
     })
   }
 
+  /** The town going about its day: one idle each, and they look up as he passes. */
+  private buildAmbient() {
+    const geos: THREE.BufferGeometry[] = []
+    const r = (() => {
+      let a = 77
+      return () => ((a = (a * 16807) % 2147483647) / 2147483647)
+    })()
+    const mat = worldMaterial({ vertexColors: true })
+    let variant = 3
+    CHAPTERS.forEach((ch, ci) => {
+      const walks = this.world.walks.filter((w) => w.chapter === ci)
+      for (const a of ch.ambient ?? []) {
+        let x: number
+        let z: number
+        let y: number
+        let yaw: number
+        if (a.along) {
+          const [s, side, b] = a.along
+          const line = walks[b === undefined ? 0 : b + 1].line
+          const half = line.e(1, s) * 0.5
+          const [tx, tz] = line.tangent(s, 2)
+          const nx = -tz * side
+          const nz = tx * side
+          const edge = half - (a.idle === 'sit' || a.idle === 'sleep' ? 0.25 : 0.45)
+          x = line.x(s) + nx * edge
+          z = line.z(s) + nz * edge
+          yaw = Math.atan2(-nx, -nz)
+        } else {
+          ;[x, z] = a.at!
+          const f = a.face ?? [x, z + 1]
+          yaw = Math.atan2(f[0] - x, f[1] - z)
+        }
+        y = this.world.standY(x, z, -1)
+        const seated = a.idle === 'sit' || a.idle === 'sleep' || a.idle === 'cards' || a.idle === 'nets'
+        const rigs: Folk[] = []
+        const place = (dx: number, dz: number, ryaw: number, kind: 'walker' | 'sitter') => {
+          const f = new Folk(kind, variant++)
+          f.root.position.set(x + dx, y, z + dz)
+          f.root.rotation.y = ryaw
+          f.root.traverse((o) => (o.castShadow = true))
+          this.scene.add(f.root)
+          rigs.push(f)
+          return f
+        }
+        const fx = Math.sin(yaw)
+        const fz = Math.cos(yaw)
+        const put = (g: THREE.BufferGeometry, px: number, py: number, pz: number, ry: number) => {
+          g.applyMatrix4(K.T(px, py, pz, 0, ry, 0))
+          geos.push(g)
+        }
+        if (a.idle === 'window') {
+          // the nearest house front with an upper floor
+          let best: (typeof houseFronts)[number] | null = null
+          let bd = 12
+          for (const h of houseFronts) {
+            const d = Math.hypot(h.x - x, h.z - z)
+            if (h.floors >= 2 && d < bd) {
+              bd = d
+              best = h
+            }
+          }
+          if (!best) continue
+          const sill = best.base + 3.1 + 1.0
+          x = best.x + Math.sin(best.yaw) * 0.08
+          z = best.z + Math.cos(best.yaw) * 0.08
+          yaw = best.yaw
+          put(K.windowLean(PAL.stoneB), best.x, sill, best.z, best.yaw)
+          y = sill - 0.95
+          const f = place(0, 0, yaw, 'walker')
+          f.root.position.y = y
+          for (const l of f.legs) l.visible = false
+        } else if (a.idle === 'cards') {
+          put(K.cafeTable(), x, y, z, yaw)
+          for (const s of [-1, 1]) {
+            put(K.bench(0.6), x + fx * s * 0.95, y, z + fz * s * 0.95, yaw)
+            place(fx * s * 0.95, fz * s * 0.95, yaw + (s > 0 ? Math.PI : 0), 'sitter')
+          }
+        } else if (a.idle === 'chat' || a.pair) {
+          const sx = Math.cos(yaw) * 0.6
+          const sz = -Math.sin(yaw) * 0.6
+          place(sx, sz, yaw - Math.PI / 2, 'walker')
+          place(-sx, -sz, yaw + Math.PI / 2, 'walker')
+        } else if (seated) {
+          put(K.bench(a.idle === 'nets' ? 1.2 : 1.6), x - fx * 0.2, y, z - fz * 0.2, yaw)
+          place(0, 0, yaw, 'sitter')
+          if (a.idle === 'nets') put(K.nets(), x + fx * 1.1, y, z + fz * 1.1, yaw)
+        } else {
+          const f = place(0, 0, yaw, 'walker')
+          if (a.idle === 'sweep') f.armR.add(new THREE.Mesh(K.heldBroom(), mat))
+          if (a.idle === 'water') f.armR.add(new THREE.Mesh(K.wateringCan(), mat))
+          if (a.idle === 'mend') put(K.boatOnTrestles(r), x + fx * 1.6, y, z + fz * 1.6, yaw + Math.PI / 2)
+        }
+        this.ambient.push({ rigs, idle: a.idle, x, z, yaw, t: r() * 20, looked: false, ci })
+      }
+    })
+    if (geos.length) {
+      const { mergeGeometries } = BGU
+      const g = mergeGeometries(geos, false)
+      if (g) {
+        g.computeBoundingSphere()
+        const m = new THREE.Mesh(g, mat)
+        m.castShadow = true
+        m.receiveShadow = true
+        this.scene.add(m)
+      }
+    }
+  }
+
+  private updateAmbient(dt: number) {
+    for (const a of this.ambient) {
+      const d = Math.hypot(a.x - this.px, a.z - this.pz)
+      const near = d < 60
+      for (const f of a.rigs) f.root.visible = near
+      if (!near) continue
+      a.t += dt
+      for (const f of a.rigs) {
+        const fyaw = f.root.rotation.y
+        const want = Math.atan2(this.px - f.root.position.x, this.pz - f.root.position.z)
+        const looking = d < 12 && a.idle !== 'sleep'
+        const lookYaw = looking ? clamp(angleDiff(fyaw, want), -1.3, 1.3) : 0
+        f.update(dt, 0, 0, 0, 0, lookYaw)
+        folkIdle(f, a.idle, a.t, looking ? 1 : 0)
+      }
+      if (!a.looked && d < 10 && a.idle !== 'sleep') {
+        a.looked = true
+        this.beat('folk:ambient', a.x, a.z)
+      }
+    }
+  }
+
   private buildDisturbances() {
     const mat = worldMaterial({ vertexColors: true })
     CHAPTERS.forEach((ch) => {
@@ -302,6 +476,7 @@ export class Game {
   // ------------------------------------------------------------------ chapters
 
   startChapter(ci: number, continuing: boolean) {
+    if (continuing) this.prevReport = this.beatReport()
     this.ci = ci
     const ch = this.ch
     const line = this.line
@@ -339,6 +514,20 @@ export class Game {
       f.runS = 0
     }
     this.applyLight(0, true)
+    this.beats = []
+    this.chapterT0 = this.time
+  }
+
+  /** Something happened the player could see: logged for the pacing metric. */
+  beat(kind: string, x: number, z: number, range = 45) {
+    if (this.mode !== 'play' && this.mode !== 'cut') return
+    if (Math.hypot(x - this.px, z - this.pz) > range) return
+    // the same kind of thing again within a few seconds is the same moment
+    const hold = kind.startsWith('ground:') ? 10 : 2
+    const prev = this.beatLast.get(kind)
+    if (prev !== undefined && this.time - prev < hold) return
+    this.beatLast.set(kind, this.time)
+    this.beats.push({ t: this.time, kind })
   }
 
   private snapCamera = true
@@ -493,7 +682,9 @@ export class Game {
     }
     this.birds.update(dt)
     this.rings.update(dt)
+    this.updateLife(dt)
     this.updateFolk(dt)
+    this.updateAmbient(dt)
     this.updateDisturbances(dt)
     this.updateCamera(dt)
     this.updateSun()
@@ -555,8 +746,10 @@ export class Game {
     let wz = mx * sy + mz * cy
     const mag = Math.min(1, Math.hypot(mx, mz))
     const surface = this.world.surfaceAt(this.px, this.pz, this.walk)
-    const slow = surface === 'water' ? 0.62 : surface === 'wood' ? 0.7 : 1
-    const vmax = ch.walkSpeed * slow * mag
+    const tv = this.traverse(surface, dt)
+    const slow = this.onStone > 0.5 ? 0.85 : surface === 'water' ? 0.62 : surface === 'wood' ? 0.7 : 1
+    const slope = tv.climb > 0.3 ? 0.82 : tv.descend > 0.3 ? 0.9 : tv.push > 0.3 ? 0.85 : 1
+    const vmax = ch.walkSpeed * slow * slope * this.surge * mag
     if (mag > 0.01) {
       const l = Math.hypot(wx, wz) || 1
       wx /= l
@@ -572,7 +765,9 @@ export class Game {
     this.px = cx
     this.pz = cz
     if (mag > 0.05) this.pyaw = dampAngle(this.pyaw, Math.atan2(this.pvx, this.pvz), 10, dt)
-    const ty = this.world.standY(this.px, this.pz, this.walk)
+    let ty = this.world.standY(this.px, this.pz, this.walk)
+    // on the stepping stones he is on the stones, hopping from one to the next
+    if (this.onStone > 0.5) ty = Math.max(ty, this.hopY)
     this.py = damp(this.py, ty, 16, dt)
 
     // progress along the dog's route
@@ -611,8 +806,9 @@ export class Game {
       if (Math.abs(rel) < 1.4) lookYaw = rel * 0.8
       lookPitch = clamp(Math.atan2(this.dog.y - this.py - 0.6, dToDog), -0.5, 0.3)
     }
-    const step = this.boy.update(dt, this.pspeed, ch.gait, lookYaw, lookPitch)
-    this.boy.root.position.set(this.px, this.py, this.pz)
+    const step = this.boy.update(dt, this.pspeed, ch.gait, lookYaw, lookPitch, this.trav)
+    const hop = this.onStone > 0.5 && this.pspeed > 0.4 ? Math.abs(Math.sin(this.boy.phase)) * 0.16 : 0
+    this.boy.root.position.set(this.px, this.py + hop, this.pz)
     this.boy.root.rotation.y = this.pyaw
     if (step) {
       this.lastFootSide *= -1
@@ -620,8 +816,31 @@ export class Game {
       if (ch.prints && surface !== 'water' && surface !== 'wood' && surface !== 'stone') {
         this.feet.add(this.px + Math.cos(this.pyaw) * side, this.py, this.pz - Math.sin(this.pyaw) * side, this.pyaw, 20)
       }
-      audio.footstep(surface, clamp(this.pspeed / 3.5, 0.3, 1))
+      const onStone = this.onStone > 0.5
+      audio.footstep(onStone ? 'stone' : surface, clamp(this.pspeed / 3.5, 0.3, 1))
+      if (surface === 'water' && !onStone) {
+        // each step in the river rings out on the water, and throws a few drops
+        const fx = this.px + Math.cos(this.pyaw) * side
+        const fz = this.pz - Math.sin(this.pyaw) * side
+        const wy = this.world.waterY(fx, fz) ?? this.py
+        this.life.ripple(fx, wy, fz, 0.8)
+        this.life.puff(fx, wy, fz, 'drops', 3, 1.3)
+      }
+      if (this.trav.climb > 0.5 || this.trav.descend > 0.5) {
+        if (Math.random() < 0.35) this.life.puff(this.px, this.py + 0.05, this.pz, 'dust', 3, 1)
+      }
     }
+    // breath on the climbs
+    this.breathT -= dt
+    if (this.trav.climb > 0.4 && this.pspeed > 0.5 && this.breathT <= 0) {
+      this.breathT = 2.2 + Math.random() * 0.6
+      audio.breath(0.5 + this.trav.climb * 0.5)
+    }
+    // the pace follows the story: a little quicker while the dog is out of sight
+    const seen = this.dogInSight()
+    this.unseenT = seen ? 0 : this.unseenT + dt
+    const ahead = this.dog.s > this.boyS + 4 && this.dog.mode !== 'companion' && this.dog.mode !== 'heel'
+    this.surge = damp(this.surge, this.unseenT > 0.8 && ahead ? 1.12 : 1, 1.2, dt)
 
     // the dog
     this.dog.update(dt, this.dogCtx())
@@ -645,6 +864,89 @@ export class Game {
     this.stepAudioT -= dt
   }
 
+  /** What the ground is doing under him (not a verb: it happens when walked into). */
+  private traverse(surface: string, dt: number) {
+    const t = this.trav
+    const was = { ...t, stone: this.onStone }
+    // stepping stones
+    this.onStone = 0
+    for (const h of this.hopLines) {
+      const dx = h.bx - h.ax
+      const dz = h.bz - h.az
+      const L2 = dx * dx + dz * dz
+      const u = clamp(((this.px - h.ax) * dx + (this.pz - h.az) * dz) / L2, 0, 1)
+      const d = Math.hypot(this.px - (h.ax + dx * u), this.pz - (h.az + dz * u))
+      if (d < 1.0 && u > 0.02 && u < 0.98) {
+        this.onStone = 1
+        this.hopY = h.y
+      }
+    }
+    t.balance = surface === 'wood' ? 1 : 0
+    t.wade = surface === 'water' && !this.onStone ? 1 : 0
+    // the slope along the way he is going
+    let slope = 0
+    if (this.pspeed > 0.3) {
+      const l = Math.hypot(this.pvx, this.pvz) || 1
+      const ux = this.pvx / l
+      const uz = this.pvz / l
+      const a = this.world.standY(this.px + ux * 1.2, this.pz + uz * 1.2, this.walk)
+      const b = this.world.standY(this.px - ux * 1.2, this.pz - uz * 1.2, this.walk)
+      slope = (a - b) / 2.4
+    }
+    t.climb = smoothstep(0.22, 0.42, slope)
+    t.descend = smoothstep(0.24, 0.45, -slope)
+    // low washing
+    t.duck = 0
+    for (const l of duckLines) {
+      if (l.y - this.py > 2.4 || l.y < this.py) continue
+      const dx = l.x1 - l.x0
+      const dz = l.z1 - l.z0
+      const L2 = dx * dx + dz * dz || 1
+      const u = clamp(((this.px - l.x0) * dx + (this.pz - l.z0) * dz) / L2, 0, 1)
+      const d = Math.hypot(this.px - (l.x0 + dx * u), this.pz - (l.z0 + dz * u))
+      if (d < 1.5) t.duck = 1
+    }
+    // brush and reeds
+    t.push = 0
+    for (const b of brushPatches) if (Math.hypot(this.px - b.x, this.pz - b.z) < b.r * 0.85) t.push = 1
+    this.rustleT -= dt
+    if (t.push && this.pspeed > 0.4 && this.rustleT <= 0) {
+      this.rustleT = 0.9 + Math.random() * 0.4
+      audio.cue('rustle', this.px, this.py + 0.6, this.pz)
+    }
+    // entering any of them is a moment
+    if (t.balance && !was.balance) this.beat('ground:balance', this.px, this.pz)
+    if (t.wade && !was.wade) this.beat('ground:wade', this.px, this.pz)
+    if (this.onStone && !was.stone) this.beat('ground:stones', this.px, this.pz)
+    if (t.climb && !was.climb) this.beat('ground:scramble', this.px, this.pz)
+    if (t.descend && !was.descend) this.beat('ground:scramble', this.px, this.pz)
+    if (t.duck && !was.duck) this.beat('ground:duck', this.px, this.pz)
+    if (t.push && !was.push) this.beat('ground:brush', this.px, this.pz)
+    return t
+  }
+
+  /** Is the dog on screen and not behind the land? */
+  private dogInSight() {
+    const d = this.dog
+    const cam = this.camera
+    const dx = d.x - cam.position.x
+    const dy = d.y + 0.5 - cam.position.y
+    const dz = d.z - cam.position.z
+    const dist = Math.hypot(dx, dy, dz)
+    if (dist > 55) return false
+    const v = new THREE.Vector3(d.x, d.y + 0.5, d.z).project(cam)
+    if (Math.abs(v.x) > 0.95 || Math.abs(v.y) > 0.95 || v.z > 1) return false
+    for (let i = 1; i < 8; i++) {
+      const k = i / 8
+      const x = cam.position.x + dx * k
+      const z = cam.position.z + dz * k
+      if (this.world.ground(x, z) > cam.position.y + dy * k + 0.2) return false
+      // in the town, the houses between (anything well off the lanes)
+      if (this.ch.bed === 'town' && k > 0.15 && k < 0.92 && this.world.walkClearance(x, z, 3) > 1.4) return false
+    }
+    return true
+  }
+
   private drainDogEvents() {
     const ch = this.ch
     for (const e of this.dog.events) {
@@ -662,6 +964,15 @@ export class Game {
         }
         case 'bolt':
           audio.stinger('bolt')
+          this.beat('dog:bolt', this.dog.x, this.dog.z)
+          break
+        case 'arrive':
+        case 'release':
+          // a stop is one moment: counted when he is first seen at it
+          if (!this.beatNodes.has(e.node) && Math.hypot(this.dog.x - this.px, this.dog.z - this.pz) < 45) {
+            this.beatNodes.add(e.node)
+            this.beat('dog:' + e.node.type, this.dog.x, this.dog.z)
+          }
           break
         case 'collar':
           this.startCut('collar')
@@ -674,7 +985,14 @@ export class Game {
           break
         case 'eyes':
           break
+        case 'act':
+          this.dogAct(e.act, e.node)
+          break
+        case 'bark':
+          audio.bark(e.x, e.y, e.z)
+          break
         case 'visit':
+          this.beat('dog:visit', this.dog.x, this.dog.z)
           for (const f of this.folk) if (f.def.id === e.npc) (f.state = 'react'), (f.t = 0)
           break
       }
@@ -690,6 +1008,72 @@ export class Game {
         audio.stinger('eyes')
       }
     }
+  }
+
+  /** The dog's business, made visible and audible. */
+  private dogAct(act: string, node: import('./types').DogNode) {
+    const d = this.dog
+    this.beat('dog:' + act, d.x, d.z)
+    const nose = () => [d.x + Math.sin(d.yaw) * 0.45, d.y, d.z + Math.cos(d.yaw) * 0.45] as const
+    switch (act) {
+      case 'dig':
+        audio.cue('dig', d.x, d.y, d.z)
+        for (let i = 0; i < 12; i++)
+          this.at(i * 0.22, () => {
+            const [x, y, z] = nose()
+            this.life.puff(x, y + 0.05, z, 'dust', 3, 2.2)
+          })
+        break
+      case 'drink': {
+        audio.cue('lap', d.x, d.y, d.z)
+        for (let i = 0; i < 5; i++)
+          this.at(0.5 + i * 0.55, () => {
+            const [x, , z] = nose()
+            this.life.ripple(x, this.world.waterY(x, z) ?? this.world.ground(x, z) + 0.05, z, 0.35)
+          })
+        break
+      }
+      case 'shake':
+        audio.cue('shake', d.x, d.y, d.z)
+        for (let i = 0; i < 6; i++) this.at(0.15 + i * 0.16, () => this.life.puff(d.x, d.y + 0.5, d.z, 'drops', 5, 1.2))
+        break
+      case 'roll':
+        audio.cue('rustle', d.x, d.y, d.z, 0.7)
+        break
+      case 'butterfly':
+        this.life.butterfly(d.x + Math.sin(d.yaw) * 0.8, d.y + 0.3, d.z + Math.cos(d.yaw) * 0.8, d.yaw)
+        break
+      case 'cat':
+        if (node.type === 'business' && node.prop) {
+          const [px, pz] = node.prop
+          this.at(2.4, () => this.life.poke(px, pz))
+        }
+        break
+    }
+  }
+
+  private at(delay: number, fn: () => void) {
+    this.later.push({ t: this.time + delay, fn })
+  }
+
+  private updateLife(dt: number) {
+    for (let i = this.later.length - 1; i >= 0; i--) {
+      if (this.later[i].t <= this.time) {
+        const f = this.later[i].fn
+        this.later.splice(i, 1)
+        f()
+      }
+    }
+    U.uPush.value.set(this.px, this.pz, this.dog.x, this.dog.z)
+    this.life.update(dt, this.px, this.pz, this.dog.x, this.dog.z, this.time, this.ci, this.progress, this.darkness)
+    for (const e of this.life.events) {
+      if (e.kind !== 'sound') this.beat(e.kind, e.x, e.z, e.kind === 'life:lantern' ? 200 : e.kind === 'life:gulls' ? 80 : 45)
+      if (e.sound === 'jays') {
+        this.birds.lift(e.x, e.y, e.z, 'small', 5, new THREE.Vector3(this.px, 0, this.pz))
+        audio.birds(e.x, e.y, e.z, 'small')
+      } else if (e.sound) audio.cue(e.sound as Parameters<typeof audio.cue>[0], e.x, e.y, e.z)
+    }
+    this.life.events.length = 0
   }
 
   private whistle() {
@@ -812,6 +1196,7 @@ export class Game {
         if ((trig === 'dog' && dDog < 5 && f.def.react !== 'treat') || (typeof trig === 'number' && d < trig)) {
           f.state = 'react'
           f.t = 0
+          this.beat('folk:' + f.def.id, f.x, f.z)
         }
       }
       let walk = 0
@@ -857,6 +1242,7 @@ export class Game {
       if (!d.hit && Math.hypot(this.dog.x - d.x, this.dog.z - d.z) < 3.2) {
         d.hit = true
         d.t = 0
+        this.beat('thing:' + d.kind, d.x, d.z)
         if (d.kind === 'pigeons') {
           this.birds.lift(d.x, d.y, d.z, 'pigeons', 6, new THREE.Vector3(this.dog.x, 0, this.dog.z))
           audio.birds(d.x, d.y, d.z, 'pigeons')
@@ -1032,6 +1418,7 @@ export class Game {
   autopilot(seconds: number, dt = 1 / 30, stopAtDog = true) {
     const log: string[] = []
     let lastMode = ''
+    const ci0 = this.ci
     for (let t = 0; t < seconds; t += dt) {
       const L = this.line
       // walk toward the dog's route a few meters ahead, but not past a waiting dog
@@ -1052,11 +1439,29 @@ export class Game {
         log.push(`${this.time.toFixed(1)}s boyS=${this.boyS.toFixed(0)} dogS=${this.dog.s.toFixed(0)} ${m}`)
         lastMode = m
       }
-      if (this.mode === 'map' || this.mode === 'end') break
+      if (this.mode === 'map' || this.mode === 'end' || this.ci !== ci0) break
     }
     input.move.x = 0
     input.move.z = 0
     return log
+  }
+
+  /**
+   * Dev: the pacing metric. Gaps in seconds between noticeable moments since
+   * the chapter began (the chapter's start and the current moment bound it).
+   */
+  beatReport() {
+    const ts = [this.chapterT0, ...this.beats.map((b) => b.t), this.time]
+    const gaps: number[] = []
+    for (let i = 1; i < ts.length; i++) gaps.push(+(ts[i] - ts[i - 1]).toFixed(1))
+    const sorted = [...gaps].sort((a, b) => a - b)
+    const median = sorted.length ? sorted[Math.floor(sorted.length / 2)] : 0
+    const kinds: Record<string, number> = {}
+    for (const b of this.beats) {
+      const k = b.kind.split(':')[0]
+      kinds[k] = (kinds[k] ?? 0) + 1
+    }
+    return { seconds: +(this.time - this.chapterT0).toFixed(1), beats: this.beats.length, median, max: sorted[sorted.length - 1] ?? 0, over25: gaps.filter((g) => g > 25).length, kinds, gaps }
   }
 
   /** Dev harness: advance game time without drawing. */

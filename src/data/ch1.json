@@ -84,10 +84,25 @@
       "hold": 1.8
     },
     {
+      "type": "business",
+      "at": [64.5, -20],
+      "act": "sniff"
+    },
+    {
       "type": "perch",
       "at": [72, -62],
       "release": 22,
       "pose": "stand"
+    },
+    {
+      "type": "invite",
+      "at": [70, -89]
+    },
+    {
+      "type": "business",
+      "at": [55.4, -119.4],
+      "act": "drink",
+      "prop": [53, -120]
     },
     {
       "type": "hazard",
@@ -96,10 +111,29 @@
       "pose": "sit"
     },
     {
+      "type": "business",
+      "at": [31, -156],
+      "act": "shake"
+    },
+    {
+      "type": "business",
+      "at": [27, -184],
+      "act": "butterfly"
+    },
+    {
+      "type": "business",
+      "at": [38, -210],
+      "act": "dig"
+    },
+    {
       "type": "perch",
       "at": [30, -244],
       "release": 20,
       "pose": "stand"
+    },
+    {
+      "type": "double-back",
+      "at": [21, -280]
     },
     {
       "type": "hazard",
@@ -108,10 +142,19 @@
       "pose": "sit"
     },
     {
+      "type": "business",
+      "at": [-6, -310.5],
+      "act": "sniff"
+    },
+    {
       "type": "perch",
       "at": [-40, -307],
       "release": 16,
       "pose": "stand"
+    },
+    {
+      "type": "invite",
+      "at": [-54, -308]
     },
     {
       "type": "perch",
@@ -152,8 +195,8 @@
     },
     {
       "kind": "stones",
-      "from": [60, 7.4, -126],
-      "to": [40, 7.4, -139],
+      "from": [60, 7.75, -126],
+      "to": [40, 7.75, -139],
       "count": 7
     },
     {
@@ -164,6 +207,21 @@
     {
       "kind": "cairn",
       "at": [-83, 44, -338]
+    },
+    {
+      "kind": "brush",
+      "at": [72, -44],
+      "r": 3
+    },
+    {
+      "kind": "reeds",
+      "at": [64.5, -116],
+      "r": 3
+    },
+    {
+      "kind": "brush",
+      "at": [-20, -307],
+      "r": 2.6
     }
   ],
   "exit": [-84, -326, 7],
@@ -225,6 +283,77 @@
       "fogFar": 1000,
       "stars": 0,
       "moon": 0
+    }
+  ],
+  "life": [
+    {
+      "_name": "fish in the swimming spot",
+      "kind": "fish",
+      "at": [54, 40],
+      "r": 4,
+      "y": 3.4
+    },
+    {
+      "kind": "butterflies",
+      "at": [70, -30],
+      "r": 10,
+      "n": 3
+    },
+    {
+      "kind": "lizards",
+      "at": [63, -12],
+      "r": 5,
+      "n": 5
+    },
+    {
+      "_name": "goats on the east ledges",
+      "kind": "goats",
+      "at": [96, -85],
+      "spots": [
+        [97, -70],
+        [94, -90],
+        [100, -100]
+      ]
+    },
+    {
+      "kind": "dragonflies",
+      "at": [50, -133],
+      "r": 7,
+      "y": 7.7,
+      "n": 5
+    },
+    {
+      "kind": "butterflies",
+      "at": [28, -190],
+      "r": 8,
+      "n": 4
+    },
+    {
+      "_name": "goats on the west wall",
+      "kind": "goats",
+      "at": [9, -203],
+      "spots": [
+        [10, -200],
+        [8, -207]
+      ]
+    },
+    {
+      "kind": "lizards",
+      "at": [24, -232],
+      "r": 5,
+      "n": 4
+    },
+    {
+      "kind": "lizards",
+      "at": [14, -268],
+      "r": 6,
+      "n": 4
+    },
+    {
+      "kind": "lizards",
+      "at": [-40, -298],
+      "r": 5,
+      "n": 4
     }
   ]
 }

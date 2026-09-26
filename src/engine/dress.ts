@@ -12,6 +12,13 @@ import { worldMaterial } from './materials'
 
 const CHUNK = 120
 
+/** Low washing lines over the alleys: the boy ducks under these. Plan segment and height. */
+export const duckLines: { x0: number; z0: number; x1: number; z1: number; y: number }[] = []
+/** Brush and reed beds on the way: he pushes through, they part. */
+export const brushPatches: { x: number; z: number; r: number; kind: string }[] = []
+/** The fronts of the town's houses, for people who lean out of windows. */
+export const houseFronts: { x: number; z: number; yaw: number; base: number; floors: number; w: number }[] = []
+
 interface Inst {
   x: number
   y: number
@@ -38,14 +45,16 @@ export function dress(w: World, quality: number): THREE.Group {
 
   const matTree = worldMaterial({ vertexColors: true, wind: 1 })
   const matStatic = worldMaterial({ vertexColors: true })
+  // low growth moves in the air and parts for the boy and the dog
+  const matLow = worldMaterial({ vertexColors: true, wind: 7, windBase: 0 })
 
   const variants: Record<string, { geo: THREE.BufferGeometry; shadow: boolean; mat: THREE.Material }> = {}
   const vr = rng(99)
   for (let i = 0; i < 3; i++) variants['pine' + i] = { geo: K.umbrellaPine(vr), shadow: true, mat: matTree }
   for (let i = 0; i < 2; i++) variants['cypress' + i] = { geo: K.cypress(vr), shadow: true, mat: matTree }
   for (let i = 0; i < 2; i++) variants['olive' + i] = { geo: K.olive(vr), shadow: true, mat: matTree }
-  for (let i = 0; i < 3; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matStatic }
-  for (let i = 0; i < 1; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matStatic }
+  for (let i = 0; i < 3; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matLow }
+  for (let i = 0; i < 1; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matLow }
   for (let i = 0; i < 2; i++) variants['rock' + i] = { geo: K.rock(vr, i % 2 ? PAL.limeA : PAL.rockGrey), shadow: false, mat: matStatic }
 
   const pick = (base: string, n: number) => base + Math.floor(r() * n)
@@ -126,7 +135,7 @@ export function dress(w: World, quality: number): THREE.Group {
 
   // ---------------------------------------------------------------- per-chapter props
   w.chapters.forEach((ch) => {
-    for (const p of ch.props ?? []) placeProp(w, p, root, matStatic, r)
+    for (const p of ch.props ?? []) placeProp(w, p, root, p.kind === 'reeds' || p.kind === 'brush' ? matLow : matStatic, r)
     if (ch.home) {
       const [gx, gy, gz] = ch.home.gate
       const [hx, , hz] = ch.home.house
@@ -192,6 +201,7 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
   const roofs = [PAL.roofA, PAL.roofB, PAL.roofC, PAL.roofA]
   const shutters = [PAL.shutterGreen, PAL.shutterGrey, PAL.shutterBlue, PAL.shutterGreen]
   const geos: THREE.BufferGeometry[] = []
+  const washing: THREE.BufferGeometry[] = []
 
   const excluded = (x: number, z: number) => {
     if (Math.hypot(x - t.center[0], z - t.center[1]) > t.radius) return true
@@ -237,6 +247,7 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
     }
     const g = K.house(spec, r, 4)
     g.applyMatrix4(K.T(cx, base, cz, 0, yaw, 0))
+    houseFronts.push({ x: cx + Math.sin(yaw) * hd, z: cz + Math.cos(yaw) * hd, yaw, base, floors, w: hw * 2 })
     geos.push(g)
     placed.push({ x: cx, z: cz, rad: Math.max(hw, hd) })
     return true
@@ -343,11 +354,15 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
         g.applyMatrix4(K.T(px, y - 0.05, pz, 0, r() * 6, 0))
         geos.push(g)
       }
-      if (half < 2 && r() < 0.28 && Math.hypot(x - t.center[0], z - t.center[1]) < t.radius * 0.8) {
+      if (half < 2 && r() < 0.34 && Math.hypot(x - t.center[0], z - t.center[1]) < t.radius * 0.8) {
+        // some hang low enough over the lane that he has to duck
+        const low = r() < 0.5
         const len = half * 2 + 1.2
-        const g = K.washingLine(len, r)
-        g.applyMatrix4(K.T(x, y + 5.2 + r() * 1.5, z, 0, Math.atan2(-tz, tx) + Math.PI / 2, 0))
-        geos.push(g)
+        const ly = y + (low ? 1.9 : 5.2 + r() * 1.5)
+        const g = K.washingLine(len, r, low)
+        g.applyMatrix4(K.T(x, ly, z, 0, Math.atan2(-tz, tx) + Math.PI / 2, 0))
+        washing.push(g)
+        if (low) duckLines.push({ x0: x - tz * half, z0: z + tx * half, x1: x + tz * half, z1: z - tx * half, y: ly })
       }
     }
   }
@@ -383,6 +398,16 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
     houses.add(m)
   }
   root.add(houses)
+  // the washing is its own mesh, so it can move
+  const wm = _merge(washing, false)
+  if (wm) {
+    wm.computeBoundingSphere()
+    const m = new THREE.Mesh(wm, worldMaterial({ vertexColors: true, hang: true }))
+    m.castShadow = true
+    m.receiveShadow = true
+    m.name = 'washing'
+    root.add(m)
+  }
 }
 
 import { mergeGeometries as _merge } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
@@ -462,6 +487,15 @@ function placeProp(w: World, p: Record<string, unknown>, root: THREE.Group, mat:
         parts.push(s)
       }
       g = _merge(parts, false)
+      break
+    }
+    case 'reeds':
+    case 'brush': {
+      const at = v3(p.at, w)
+      const rad = (p.r as number) ?? 3
+      g = K.reedBed(rad, (p.n as number) ?? Math.round(rad * rad * (kind === 'reeds' ? 9 : 4)), r, (x, z) => w.ground(x, z), at.x, at.z, kind)
+      g.translate(at.x, 0, at.z)
+      brushPatches.push({ x: at.x, z: at.z, r: rad, kind })
       break
     }
     case 'fountain': {

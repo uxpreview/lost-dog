@@ -323,6 +323,17 @@ export class World {
     return ch.surface
   }
 
+  /** The surface of the nearest running river at (x, z), or null. */
+  waterY(x: number, z: number): number | null {
+    for (let ri = 0; ri < this.rivers.length; ri++) {
+      if (this.data.rivers[ri].dry) continue
+      const line = this.rivers[ri]
+      const n = line.nearest(x, z, 12)
+      if (n && n.d < line.e(1, n.s) * 0.5 + 1.5) return line.e(0, n.s)
+    }
+    return null
+  }
+
   inWater(x: number, z: number) {
     for (let ri = 0; ri < this.rivers.length; ri++) {
       if (this.data.rivers[ri].dry) continue

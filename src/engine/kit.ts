@@ -337,16 +337,45 @@ export function boat(r: R) {
   return k.build()
 }
 
-export function washingLine(len: number, r: R) {
+/** Washing on a line, the line at local y = 0. Each vertex knows how far it hangs (aHang), so it can flap. */
+export function washingLine(len: number, r: R, low = false) {
   const k = new Kit()
   k.add(box(), PAL.ink, T(0, 0, 0, 0, 0, 0, 0.03, 0.03, len), { tone: 1.2 })
   const cloths = [PAL.clothA, PAL.clothB, PAL.clothC, PAL.clothD, PAL.towelB]
   let z = -len / 2 + 0.4
   while (z < len / 2 - 0.6) {
     const w = 0.5 + r() * 0.7
-    const h = 0.5 + r() * 0.6
-    k.add(box(), cloths[Math.floor(r() * cloths.length)], T(0, -h, z + w / 2, 0, 0, 0, 0.03, h, w))
+    const h = low ? 0.35 + r() * 0.25 : 0.5 + r() * 0.6
+    k.add(new THREE.BoxGeometry(1, 1, 1, 1, 2, 2).translate(0, 0.5, 0), cloths[Math.floor(r() * cloths.length)], T(0, -h, z + w / 2, 0, 0, 0, 0.03, h, w))
     z += w + 0.2 + r() * 0.5
+  }
+  const g = k.build()
+  const p = g.attributes.position
+  const hang = new Float32Array(p.count)
+  for (let i = 0; i < p.count; i++) hang[i] = Math.max(0, -p.getY(i))
+  g.setAttribute('aHang', new THREE.BufferAttribute(hang, 1))
+  return g
+}
+
+/** A bed of reeds or tall grass around (0,0), r meters across; base on `ground`. */
+export function reedBed(radius: number, n: number, r: R, ground: (x: number, z: number) => number, cx: number, cz: number, kind: 'reeds' | 'brush') {
+  const k = new Kit()
+  for (let i = 0; i < n; i++) {
+    const a = r() * Math.PI * 2
+    const d = Math.sqrt(r()) * radius
+    const x = Math.cos(a) * d
+    const z = Math.sin(a) * d
+    const y = ground(cx + x, cz + z) - 0.05
+    if (kind === 'reeds') {
+      const h = 1.1 + r() * 0.9
+      k.add(cone(3), r() < 0.5 ? PAL.duneGrass : PAL.floorGrass, T(x, y, z, (r() - 0.5) * 0.2, r() * 3, (r() - 0.5) * 0.2, 0.09, h, 0.09), { tone: 0.85 + r() * 0.25 })
+      if (r() < 0.35) k.add(cyl(4), PAL.pineTrunk, T(x, y + h * 0.78, z, 0, 0, 0, 0.07, 0.22, 0.07), { tone: 1.1 })
+    } else {
+      const h = 0.7 + r() * 0.6
+      const w = 0.35 + r() * 0.3
+      k.add(cone(4), r() < 0.5 ? PAL.maquis : PAL.maquisDark, T(x, y, z, 0, r() * 3, 0, w, h, w), { tone: 0.85 + r() * 0.25 })
+      if (r() < 0.25) k.add(ico(0), PAL.awningOchre, T(x, y + h * 0.8, z, 0, 0, 0, 0.12, 0.1, 0.12), { tone: 1 })
+    }
   }
   return k.build()
 }
@@ -553,5 +582,69 @@ export function doorLeaf() {
   const k = new Kit()
   k.add(box(), PAL.shutterBlue, T(0.62, 0, 0, 0, 0, 0, 1.24, 2.25, 0.08))
   k.add(box(), PAL.windowGlow, T(1.05, 1.1, 0.06, 0, 0, 0, 0.08, 0.08, 0.04))
+  return k.build()
+}
+
+// ------------------------------------------------------------------ the town's furniture
+
+/** A cafe table with a cloth and two glasses, at (0,0). */
+export function cafeTable() {
+  const k = new Kit()
+  k.add(cyl(6), PAL.ink, T(0, 0, 0, 0, 0, 0, 0.12, 0.72, 0.12), { tone: 1.3 })
+  k.add(cyl(8), PAL.clothA, T(0, 0.72, 0, 0, 0, 0, 0.9, 0.05, 0.9))
+  k.add(cyl(5), PAL.clothC, T(0.15, 0.77, 0.1, 0, 0, 0, 0.07, 0.12, 0.07))
+  k.add(box(), PAL.towelB, T(-0.1, 0.77, -0.05, 0, 0.4, 0, 0.18, 0.02, 0.26))
+  return k.build()
+}
+
+/** A low stone bench or a doorstep to sit on. */
+export function bench(len = 1.6) {
+  const k = new Kit()
+  k.add(box(), PAL.stoneC, T(0, 0, 0, 0, 0, 0, len, 0.42, 0.5), { tone: 0.95 })
+  k.add(box(), PAL.stoneB, T(0, 0.42, 0, 0, 0, 0, len + 0.08, 0.06, 0.56))
+  return k.build()
+}
+
+/** An open window someone leans out of: the dark room behind, a sill in front. Front at +z. */
+export function windowLean(wall: string) {
+  const k = new Kit()
+  k.add(box(), '#2E3238', T(0, -0.1, -0.35, 0, 0, 0, 1.1, 1.4, 0.4))
+  k.add(box(), wall, T(0, -0.55, 0.02, 0, 0, 0, 1.3, 0.55, 0.36), { tone: 0.95 })
+  k.add(box(), PAL.stoneB, T(0, 0, 0.05, 0, 0, 0, 1.4, 0.07, 0.46))
+  for (const s of [-1, 1]) k.add(box(), PAL.shutterGreen, T(s * 0.95, -0.2, 0.05, 0, s * 0.5, 0, 0.45, 1.25, 0.05))
+  return k.build()
+}
+
+/** Nets heaped on the quay, with a float or two. */
+export function nets() {
+  const k = new Kit()
+  k.add(ico(0), '#6E8A86', T(0, 0.2, 0, 0, 0.4, 0, 1.6, 0.45, 1.1), { jitter: 0.12 })
+  k.add(ico(0), '#7E9894', T(0.5, 0.35, 0.2, 0, 1, 0, 0.9, 0.35, 0.7), { jitter: 0.1 })
+  for (let i = 0; i < 3; i++) k.add(ico(0), PAL.awningOchre, T(-0.6 + i * 0.5, 0.35, 0.45, 0, 0, 0, 0.18, 0.18, 0.18))
+  return k.build()
+}
+
+/** A boat hauled out on the quay on two trestles, for mending. */
+export function boatOnTrestles(r: R) {
+  const b = boat(r)
+  b.applyMatrix4(T(0, 0.55, 0, 0, 0, 0.12))
+  const k = new Kit()
+  for (const x of [-1.2, 1.2]) {
+    k.add(box(), PAL.wood, T(x, 0, 0, 0, 0, 0, 0.12, 0.6, 1.2))
+    k.add(box(), PAL.wood, T(x, 0.5, 0, 0, 0, 0, 0.2, 0.1, 1.4))
+  }
+  return mergeGeometries([b, k.build()], false)!
+}
+
+/** A small tin can for watering the pots. */
+export function wateringCan() {
+  return new Kit().add(cyl(6), PAL.shutterGrey, T(0, -0.15, 0.08, 0, 0, 0, 0.16, 0.2, 0.16)).add(cyl(4), PAL.shutterGrey, T(0, -0.05, 0.2, 0.9, 0, 0, 0.03, 0.22, 0.03)).build()
+}
+
+/** The broom a sweeper holds (bristles down at the far end). */
+export function heldBroom() {
+  const k = new Kit()
+  k.add(cyl(4), PAL.woodLight, T(0, -1.1, 0, 0, 0, 0, 0.04, 1.3, 0.04))
+  k.add(cone(6), PAL.awningOchre, T(0, -1.05, 0, Math.PI, 0, 0, 0.26, 0.34, 0.26))
   return k.build()
 }
