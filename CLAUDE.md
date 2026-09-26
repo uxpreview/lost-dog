@@ -83,9 +83,9 @@ Coordinates: meters, x east, z south (the sea is south). Path points are
 plan `[x, z]` / `[x, z, radius]`. Light keyframes are keyed to how far along
 the dog's route the boy has come (0 to 1), never to clock time.
 
-Files under `src/App.tsx`, `src/art`, `src/components`, `src/game`, `src/ui`,
-`src/audio` are the pre-rebuild engine, unused, kept until the human decides
-to delete them.
+The pre-rebuild engine was deleted after the rebuild; it lives in git history
+before commit 0e2da4f. `renders/` still holds its judged screenshots because
+the old gate verdicts in `docs/` cite them.
 
 ## Testing
 
