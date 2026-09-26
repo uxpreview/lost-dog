@@ -1,0 +1,166 @@
+{
+  "id": "ch4",
+  "title": "The Shore",
+  "bed": "shore",
+  "walkSpeed": 2.7,
+  "gait": "calm",
+  "surface": "sand",
+  "prints": true,
+  "whistle": "companion",
+  "map": true,
+  "main": [
+    [-698, 28, 7.2, 5],
+    [-708, 48, 3.4, 5],
+    [-726, 64, 2.4, 6],
+    [-752, 72, 2.1, 6],
+    [-780, 76, 2.0, 6],
+    [-808, 74, 2.1, 6],
+    [-832, 66, 2.4, 5.5],
+    [-852, 54, 3.2, 5],
+    [-866, 42, 4.4, 4.5],
+    [-874, 30, 5.6, 4],
+    [-878, 20, 6.4, 3.4]
+  ],
+  "branches": [
+    {
+      "_name": "the jetty",
+      "path": [
+        [-780, 76, 2.0],
+        [-782, 92, 1.6, 2],
+        [-784, 106, 1.6, 2]
+      ],
+      "bridge": true
+    }
+  ],
+  "areas": [
+    {
+      "_name": "the beach",
+      "poly": [
+        [-700, 40],
+        [-716, 78],
+        [-760, 84],
+        [-812, 84],
+        [-850, 74],
+        [-872, 56],
+        [-866, 38],
+        [-830, 54],
+        [-790, 62],
+        [-744, 58],
+        [-716, 42]
+      ],
+      "surface": "sand"
+    },
+    {
+      "_name": "the gate",
+      "circle": [-879, 18, 5],
+      "y": 6.5,
+      "surface": "dust"
+    }
+  ],
+  "home": {
+    "gate": [-880, 6.5, 14],
+    "house": [-886, 7, 2],
+    "facing": [-870, 36]
+  },
+  "dog": [
+    {
+      "type": "heel",
+      "at": [-698, 28],
+      "until": {
+        "progress": 0.78
+      }
+    },
+    {
+      "type": "gate",
+      "at": [-879.4, 16.4],
+      "pose": "sit",
+      "release": 5.2
+    }
+  ],
+  "cameras": [
+    {
+      "_name": "home",
+      "trigger": [-876, 24, 9],
+      "position": [-870, 10.2, 30.5],
+      "lookAt": [-883, 7.6, 11],
+      "fov": 44
+    }
+  ],
+  "props": [
+    {
+      "kind": "boat",
+      "at": [-760, 1.4, 86],
+      "rot": 1.2
+    },
+    {
+      "kind": "boat",
+      "at": [-820, 1.4, 84],
+      "rot": 2.0
+    },
+    {
+      "kind": "jetty",
+      "from": [-782, 1.6, 86],
+      "to": [-786, 1.6, 116]
+    },
+    {
+      "kind": "driftwood",
+      "at": [-740, 2.1, 80],
+      "rot": 0.3
+    }
+  ],
+  "exit": null,
+  "landmarks": [
+    {
+      "id": "beach",
+      "at": [-760, 72],
+      "r": 20,
+      "glyph": "wave"
+    },
+    {
+      "id": "jetty",
+      "at": [-784, 104],
+      "r": 8,
+      "glyph": "jetty"
+    },
+    {
+      "id": "home",
+      "at": [-880, 16],
+      "r": 10,
+      "glyph": "home"
+    }
+  ],
+  "lighting": [
+    {
+      "at": 0,
+      "sun": [196, 13],
+      "sunColor": "#B4C4E0",
+      "sunI": 0.9,
+      "skyTop": "#1C2A48",
+      "skyHorizon": "#3E5572",
+      "ambSky": "#5A6A90",
+      "ambGround": "#343C50",
+      "ambI": 0.8,
+      "fog": "#34466A",
+      "fogNear": 50,
+      "fogFar": 620,
+      "stars": 1,
+      "moon": 1
+    },
+    {
+      "at": 1,
+      "sun": [206, 15],
+      "sunColor": "#BCCAE4",
+      "sunI": 0.9,
+      "skyTop": "#1A2644",
+      "skyHorizon": "#3A5070",
+      "ambSky": "#5A6A90",
+      "ambGround": "#343C50",
+      "ambI": 0.8,
+      "fog": "#324466",
+      "fogNear": 50,
+      "fogFar": 620,
+      "stars": 1,
+      "moon": 1
+    }
+  ]
+}

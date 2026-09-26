@@ -1,3 +1,6 @@
+> **Superseded.** These gate prompts belong to the pre-rebuild process. See
+> `docs/decisions.md` D41 to D47 and the Working rhythm section of `CLAUDE.md`.
+
 # Prompts for Claude Code
 
 How to use this file: one session per gate, one prompt per session. Start a
