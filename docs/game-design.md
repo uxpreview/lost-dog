@@ -74,6 +74,12 @@ The route is a chain of nodes in the chapter manifest. Node types:
   where the story places it
 - **vanish / appear** — for transitions where he slips out of sight. He only
   teleports while fully occluded, never on screen
+- **asides** (D48) — what a dog does on a walk, between the stops, never
+  waiting for the boy: `business` (drink, dig, sniff off the path and back,
+  roll, shake, a butterfly chase, nosing a cat), `invite` (a play-bow and a
+  bark when the boy is far behind) and `double-back` (a few meters back
+  toward the boy, a check, on). He does them where the boy can see, skips any
+  the boy has already passed, and keeps his lead afterwards
 
 Distance discipline: he holds roughly 20 to 45 meters ahead at trot. If the
 player closes distance at a non-scripted point he advances to the next node,

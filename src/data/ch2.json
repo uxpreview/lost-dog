@@ -191,10 +191,11 @@
       "at": [-194, -146]
     },
     {
-      "type": "perch",
+      "type": "visit",
       "at": [-212, -118],
-      "release": 16,
-      "pose": "stand"
+      "npc": "stallholder",
+      "hold": 3.5,
+      "release": 16
     },
     {
       "type": "business",
@@ -305,6 +306,25 @@
       "face": [-290, 22],
       "react": "look",
       "trigger": 8
+    },
+    {
+      "_name": "town knows this dog (2 of 3): she keeps something for him",
+      "id": "stallholder",
+      "kind": "walker",
+      "at": [-214.5, -121],
+      "face": [-212, -118],
+      "react": "treat",
+      "trigger": "dog"
+    },
+    {
+      "_name": "town knows this dog (3 of 3, missable): his bowl by her door; she shows the boy the way he goes",
+      "id": "courtyard-woman",
+      "kind": "walker",
+      "at": [-158, -127],
+      "face": [-156, -122],
+      "react": "point",
+      "point": [-212, -118],
+      "trigger": 7
     }
   ],
   "disturbances": [
@@ -375,6 +395,38 @@
     {
       "kind": "fountain",
       "at": [-376, -110]
+    },
+    {
+      "kind": "crates",
+      "at": [-300, 32.5]
+    },
+    {
+      "kind": "crates",
+      "at": [-272, 31.5],
+      "rot": 0.4
+    },
+    {
+      "kind": "crates",
+      "at": [-338, 31],
+      "rot": -0.3
+    },
+    {
+      "kind": "dryfountain",
+      "at": [-307, -57]
+    },
+    {
+      "kind": "bench",
+      "at": [-151, -120],
+      "rot": -0.9
+    },
+    {
+      "kind": "bench",
+      "at": [-381, -104],
+      "rot": 1.2
+    },
+    {
+      "kind": "bowl",
+      "at": [-155.4, -125.6]
     }
   ],
   "exit": [-420, -211, 6],
@@ -584,11 +636,6 @@
       "idle": "sit",
       "at": [-312, -51],
       "face": [-306, -58]
-    },
-    {
-      "idle": "laundry",
-      "at": [-158, -127],
-      "face": [-156, -122]
     },
     {
       "idle": "window",

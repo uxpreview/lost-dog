@@ -1,89 +1,64 @@
-# Next session: make the walk worth walking
+# Next session: play it by hand, then thin or thicken
 
-Playtest feedback after the rebuild: **the world is still very empty and
-walking is quite boring.** This is the most important problem in the game.
-Everything below is aimed at it, in priority order. Nothing here adds a
-verb, UI, text or story content.
+The last session built the whole "make the walk worth walking" plan (D48 to
+D54 in `decisions.md`). Everything was verified by autopilot, close-up stills
+and the probe, **not by playing it with hands on a keyboard or a phone.** That
+is the first job.
 
-## Why it's boring (diagnosis)
+## Where it stands (measured, `node tools/probe.mjs all <label>`)
 
-1. **Nothing happens between the dog's stops.** He trots, waits, trots.
-   Beats land every 60 to 90 seconds; a walking game needs something every
-   15 to 25.
-2. **The ground is inert.** Paths are corridors with nothing to walk
-   *through*: no water to splash, no brush to push past, no ledge to scramble,
-   no log to balance on (the log and plank exist but the boy just walks them).
-3. **The world has no life.** Five townspeople, no animals besides pigeons
-   and cats, no wind you can see, no motion at the edges of the frame.
-4. **The set dressing is sparse and repetitive.** Three pine shapes, one
-   shrub, bare slopes between. Nothing to look at up close.
-5. **Walking pace is flat.** Same speed whether the dog just vanished round
-   a bend or is sitting ten meters away.
+| | Before | After |
+|---|---|---|
+| Canyon: median / longest gap between moments | 18.4 s / 32.4 s | 3.6 s / 11.2 s |
+| Old Town | 12.5 s / 31.4 s | 2.9 s / 19 s |
+| Woods | 21.1 s / 30.5 s | 4.3 s / 11.5 s |
+| Shore | 76.5 s / 76.5 s | 7.9 s / 16.7 s |
+| Gaps over 25 s, whole day | 8 | 0 |
+| Worst triangles (nine spots) | 1.07M (upper town) | 0.73M (woods) |
+| Draw calls (nine spots) | 123 to 333 | 121 to 337 |
 
-## The plan, in order
+Screenshots: `renders/probe/before/` and `renders/probe/after/`.
 
-### 1. The dog becomes a performance (biggest lever)
-New node types and idle acts, all data-driven in `src/engine/dog.ts`:
-- `business` nodes between waits: drinks at the river, digs, sniffs a trail
-  off the path and comes back, rolls in the grass, shakes off water after
-  the ford, chases a butterfly two bounds and gives up, noses a cat.
-- `invite`: a play-bow and a bark when the boy is far behind, then a trot.
-- `double-back`: he comes back toward the boy a few meters, checks, turns
-  and goes on. (Rule 3, looking back, made physical.)
-- Target: some dog beat every 15 to 25 seconds of walking.
+## 1. Play the whole day by hand, desktop and phone portrait
 
-### 2. Traversal texture (not verbs, they happen when walked into)
-- Balance on the log and plank: arms out, slower, a little sway.
-- Wading at the ford: splash rings at each step, slower, trousers-up pose.
-- Stepping stones that he hops between.
-- Pushing through tall brush and reeds (they part and spring back).
-- Short ledge scrambles on the gully climb and the woods descent.
-- Ducking under washing lines in the town.
+Judge, in this order:
 
-### 3. Life
-- Canyon: lizards that scatter off sunlit rocks as you pass, goats on the
-  ledges with a bell, fish rings in the pool, dragonflies over the ford.
-- Town: 20 to 30 ambient people with one idle each (sweeping, hanging
-  laundry, card players at a table, a man asleep on a step, a woman at a
-  window), cafe tables, a boat being mended. All react to the boy by looking.
-- Woods: a deer that bolts early (golden hour only), jays, drifting seeds.
-- Shore: gulls wheeling, crabs sidling, a lantern boat far out (cool light,
-  never the reserved window gold).
-- Wind you can see: grass and brush sway, washing flaps, pine tops move.
+- **Is it now too busy?** The target was a moment every 15 to 25 s; autopilot
+  says every 3 to 8 s. Autopilot counts everything (a lizard, a head turning,
+  entering the reeds) and walks straight at full speed. If the dog's asides
+  crowd his stops, delete some from the manifests: they are single entries in
+  each chapter's `dog` list (`business`, `invite`, `double-back`).
+- **Does the dog still read as leading?** He bounds to keep his lead after an
+  aside and skips any the boy has passed. Watch for him bounding past the boy
+  too often, which could read as fleeing (rule: he is never fleeing).
+- **The traversal poses at speed:** balance on the log, stones at the ford,
+  the reeds before the ford, the gully scramble, ducking in the town.
+- **Sound.** Every new sound (goat bells, rustle, splash, lapping, digging,
+  shaking off, hooves, breath) is synthesised and was never heard in this
+  session (headless). Listen for anything too loud or wrong.
+- **Mobile:** one thumb, portrait, sound off. Nothing new depends on sound.
 
-### 4. Density and variety
-- Ground cover: grass tufts and wildflowers (yellow, violet and white only)
-  scattered by rule, heavier near water and in clearings.
-- More prop kinds: fig and carob trees, reed beds, boulder fields, ruined
-  walls and a shrine in the canyon, terraces and beehives on the hillside,
-  fishing nets and crates on the quay, a dry fountain, stone benches.
-- Two or three variants of every house kind; balconies with plants; arches
-  over alleys.
-- Budget check after: stay under ~1M triangles per frame desktop, measure.
+## 2. Known weak spots
 
-### 5. Pace that follows the story, not a run button
-- Gait speeds up a little (authored, not player-chosen) when the dog has
-  just gone out of sight, and settles when he's in view.
-- Chapter walk speeds tuned up ~10 to 15 percent if playtest agrees.
-- Footstep audio per surface is already in; add breath on climbs.
+- The lookout vista frames the town through pines; the sea is hidden. Either
+  clear a view corridor in dressing or move the camera.
+- Grass tufts are thin at gameplay distance; flowers read better. Consider
+  bushier tufts before more of them.
+- The cat's bat at the dog's nose is subtle; she mostly just moves off.
+- Ambient people and small critters pop in at 48 m and 55 m; on the long quay
+  this may show.
+- Draw calls are still over the quality-bar figures (200 town, 150 elsewhere),
+  as they were before. Triangles have headroom now.
+- Not built from the old plan: terraces on the hillside (beehives only), reed
+  beds along every bank (three placed by hand), a third variant of every house
+  kind.
 
-### 6. Discovery that fills the map
-- Each chapter gets two optional spots worth finding (a framed vista, a
-  hidden swimming rock, the chapel roof), and each adds its drawing to the
-  end map. The map becomes a record of how the day was spent.
-- Two more "town knows this dog" moments (story recommends three, one
-  missable). Still owed from D46.
+## 3. Open questions for the human
 
-## How the session should measure it
-
-- Autopilot log: seconds between beats (dog acts, reactions, traversal
-  moments) per chapter. Target median under 25 s.
-- One screenshot per chapter at desktop and portrait, before and after.
-- Triangles and draw calls at the same nine spots as the rebuild.
-- Red audit and build pass before push.
-
-## Open questions for the human
-
-- Is it OK to raise walking speed ~10 to 15 percent across the board?
-- Should chapters get longer routes now (toward the 40 to 50 minute target)
-  or only denser? Recommendation: denser first, longer later.
+- Raise the chapter walk speeds 10 to 15 percent? Not done. The out-of-sight
+  surge (D52) is in; decide after playing.
+- Longer routes toward the 40 to 50 minute target, or keep densifying?
+  Recommendation still: denser first; the day is about 12 minutes of straight
+  walking.
+- Are three "town knows this dog" moments the right number, and is the
+  missable one (the bowl in the washing courtyard) findable enough?

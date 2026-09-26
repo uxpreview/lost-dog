@@ -80,8 +80,8 @@ if (what === 'shots' || what === 'all') {
     for (let ch = 0; ch < 4; ch++) {
       const page = await open(ch, viewport)
       await walkTo(page, SHOT_AT[ch])
-      const f = join(out, `ch${ch + 1}-${name}.png`)
-      await page.screenshot({ path: f })
+      const f = join(out, `ch${ch + 1}-${name}.jpg`)
+      await page.screenshot({ path: f, type: 'jpeg', quality: 84 })
       console.log('shot', f)
       await page.close()
     }

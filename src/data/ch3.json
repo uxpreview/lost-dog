@@ -182,6 +182,12 @@
       "kind": "brush",
       "at": [-660, -50],
       "r": 3
+    },
+    {
+      "_name": "the charcoal burner's clearing",
+      "kind": "kiln",
+      "at": [-572, -102],
+      "rot": 0.5
     }
   ],
   "exit": [-693, 16, 3],
@@ -209,6 +215,13 @@
       "at": [-693, 16],
       "r": 12,
       "glyph": "pine"
+    },
+    {
+      "_name": "optional: the charcoal clearing",
+      "id": "clearing",
+      "at": [-568, -106],
+      "r": 9,
+      "glyph": "kiln"
     }
   ],
   "lighting": [
@@ -284,6 +297,13 @@
       "position": [-688, 15.5, 1],
       "lookAt": [-706, 5, 60],
       "fov": 50
+    },
+    {
+      "_name": "the lookout: the town and the sea in the last sun",
+      "trigger": [-500, -262, 6],
+      "position": [-494, 50.5, -268],
+      "lookAt": [-330, 6, -50],
+      "fov": 44
     }
   ],
   "life": [

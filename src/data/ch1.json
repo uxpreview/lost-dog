@@ -222,6 +222,45 @@
       "kind": "brush",
       "at": [-20, -307],
       "r": 2.6
+    },
+    {
+      "_name": "a shrine at the end of the gravel bar",
+      "kind": "shrine",
+      "at": [94.8, -28],
+      "rot": 3.14
+    },
+    {
+      "_name": "a shepherd's hut, fallen in",
+      "kind": "ruin",
+      "at": [40, -250],
+      "w": 5,
+      "d": 4,
+      "rot": 0.3
+    },
+    {
+      "_name": "beehives above the rim",
+      "kind": "beehives",
+      "at": [-78, -336],
+      "n": 5,
+      "rot": 0.6
+    },
+    {
+      "_name": "boulders fallen off the east wall",
+      "kind": "rocks",
+      "at": [84, -50],
+      "r": 6,
+      "n": 10
+    },
+    {
+      "kind": "rocks",
+      "at": [18, -225],
+      "r": 5,
+      "n": 8
+    },
+    {
+      "_name": "the swimming rock, down the shallows",
+      "kind": "slab",
+      "at": [46.5, 9.3, -216.5]
     }
   ],
   "exit": [-84, -326, 7],
@@ -249,6 +288,20 @@
       "at": [-90, -332],
       "r": 12,
       "glyph": "rim"
+    },
+    {
+      "_name": "optional: the end of the gravel bar",
+      "id": "shrine",
+      "at": [94.8, -28],
+      "r": 7,
+      "glyph": "shrine"
+    },
+    {
+      "_name": "optional: down the shallows",
+      "id": "swimming-rock",
+      "at": [44, -214],
+      "r": 7,
+      "glyph": "swimrock"
     }
   ],
   "lighting": [
@@ -354,6 +407,12 @@
       "at": [-40, -298],
       "r": 5,
       "n": 4
+    },
+    {
+      "kind": "fish",
+      "at": [44, -218],
+      "r": 3,
+      "y": 9.36
     }
   ]
 }

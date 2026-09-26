@@ -431,7 +431,10 @@ export class Life {
     for (const g of this.groups) {
       const [ax, az] = g.def.at
       const dCenter = Math.hypot(bx - ax, bz - az)
-      const near = dCenter < (g.def.kind === 'lantern' ? 400 : g.def.kind === 'gulls' ? 160 : 110)
+      // small things are not drawn past where they could be seen
+      const k = g.def.kind
+      const small = k === 'lizards' || k === 'butterflies' || k === 'dragonflies' || k === 'crabs' || k === 'fish'
+      const near = dCenter < (k === 'lantern' ? 400 : k === 'gulls' ? 160 : small ? 55 : 110)
       for (const c of g.items) c.obj.visible = near && c.state !== 2
       if (!near) {
         // out of sight they reset, so a second pass finds them again

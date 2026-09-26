@@ -76,7 +76,11 @@ type R = () => number
 
 // ------------------------------------------------------------------ trees
 
-export function umbrellaPine(r: R) {
+/**
+ * An umbrella pine. `low` builds the far version of the same tree: the same
+ * random draws (so the same height, lean and spread), one canopy mass.
+ */
+export function umbrellaPine(r: R, low = false) {
   const k = new Kit()
   const h = 6.5 + r() * 4
   const lean = (r() - 0.5) * 0.25
@@ -91,7 +95,7 @@ export function umbrellaPine(r: R) {
   const arms = 2 + Math.floor(r() * 2)
   for (let a = 0; a < arms; a++) {
     const ang = (a / arms) * Math.PI * 2 + r()
-    k.add(cyl(4, 0.6), PAL.pineTrunk, T(topX, top - 0.3, topZ, Math.cos(ang) * 0.7, 0, Math.sin(ang) * 0.7, 0.2, h * 0.32, 0.2), { tone: 0.85 })
+    if (!low) k.add(cyl(4, 0.6), PAL.pineTrunk, T(topX, top - 0.3, topZ, Math.cos(ang) * 0.7, 0, Math.sin(ang) * 0.7, 0.2, h * 0.32, 0.2), { tone: 0.85 })
   }
   // the umbrella: overlapping flattened blobs, lighter on top
   const R0 = 2.4 + r() * 1.4
@@ -103,8 +107,15 @@ export function umbrellaPine(r: R) {
     const y = h * 0.86 + (r() - 0.3) * 0.8
     const x = topX + Math.cos(a) * d
     const z = topZ + Math.sin(a) * d
-    k.add(ico(0), PAL.pineCanopy, T(x, y, z, 0, r() * 3, 0, s, s * 0.36, s), { tone: 0.82 + r() * 0.12, jitter: 0.3 })
-    if (b % 2 === 0) k.add(ico(0), PAL.pineCanopyLight, T(x, y + s * 0.12, z, 0, r() * 3, 0, s * 0.75, s * 0.22, s * 0.75), { tone: 0.9 + r() * 0.15 })
+    const ry = r() * 3
+    const tone = 0.82 + r() * 0.12
+    if (!low) k.add(ico(0), PAL.pineCanopy, T(x, y, z, 0, ry, 0, s, s * 0.36, s), { tone, jitter: 0.3 })
+    else if (b === 0) k.add(ico(0), PAL.pineCanopy, T(x, y + 0.2, z, 0, ry, 0, R0 * 2.3, R0 * 0.7, R0 * 2.3), { tone })
+    if (b % 2 === 0) {
+      const ry2 = r() * 3
+      const t2 = 0.9 + r() * 0.15
+      if (!low) k.add(ico(0), PAL.pineCanopyLight, T(x, y + s * 0.12, z, 0, ry2, 0, s * 0.75, s * 0.22, s * 0.75), { tone: t2 })
+    }
   }
   return k.build()
 }
@@ -220,6 +231,36 @@ export function house(s: HouseSpec, r: R, plinth = 3, windows = false) {
     k.add(box(), PAL.ink, T(0, FH + 0.18, s.d / 2 + 0.95, 0, 0, 0, 2.4, 0.8, 0.05), { tone: 1.4 })
   }
   if (r() < 0.5) k.add(box(), s.wall, T(s.w * 0.25, H + 0.8, -s.d * 0.2, 0, 0, 0, 0.6, 1.8, 0.6), { tone: 0.94 })
+  // what makes one house not its neighbour: flower boxes, an awning, an outside stair
+  const variant = r()
+  if (variant < 0.45) {
+    for (let f = 1; f < s.floors; f++)
+      for (let c = 0; c < cols; c++) {
+        if (r() < 0.45) continue
+        const x = (c - (cols - 1) / 2) * (s.w / cols)
+        const g = flowerBox(r)
+        g.applyMatrix4(T(x, f * FH + 0.62, s.d / 2 + 0.14))
+        k.parts.push(g)
+      }
+  }
+  if (variant > 0.35 && variant < 0.6) {
+    const x = (Math.floor(cols / 2) - (cols - 1) / 2) * (s.w / cols)
+    for (let i = 0; i < 4; i++) k.add(box(), i % 2 ? PAL.awningCream : PAL.awningOchre, T(x - 0.6 + i * 0.4 + 0.2, 2.45, s.d / 2 + 0.45, 0.35, 0, 0, 0.4, 0.05, 0.95))
+  }
+  if (variant > 0.72 && s.floors > 1 && s.w > 5) {
+    // an outside stair up the front to the first floor
+    const n = 9
+    for (let i = 0; i < n; i++) k.add(box(), PAL.stoneC, T(s.w / 2 - 0.6 - i * 0.32, 0, s.d / 2 + 0.55, 0, 0, 0, 0.34, (i + 1) * (FH / n), 1.0), { tone: 0.95 })
+    k.add(box(), PAL.stoneC, T(s.w / 2 - 0.6 - n * 0.32 - 0.5, 0, s.d / 2 + 0.55, 0, 0, 0, 1.0, FH, 1.0), { tone: 0.95 })
+    k.add(box(), PAL.door, T(s.w / 2 - 0.6 - n * 0.32 - 0.5, FH, s.d / 2 + 0.02, 0, 0, 0, 0.9, 2.1, 0.1))
+    if (r() < 0.7) k.parts.push(pot(r).applyMatrix4(T(s.w / 2 - 0.6 - n * 0.32 - 0.5, FH, s.d / 2 + 0.75)))
+  }
+  if (s.floors > 1 && variant > 0.6 && variant < 0.72) {
+    // a balcony with pots
+    k.add(box(), s.wall, T(0, FH, s.d / 2 + 0.5, 0, 0, 0, 2.4, 0.18, 1.0), { tone: 0.9 })
+    k.add(box(), PAL.ink, T(0, FH + 0.18, s.d / 2 + 0.95, 0, 0, 0, 2.4, 0.8, 0.05), { tone: 1.4 })
+    for (const x of [-0.8, 0.2, 0.9]) k.parts.push(pot(r).applyMatrix4(T(x, FH + 0.18, s.d / 2 + 0.6)))
+  }
   return k.build()
 }
 
@@ -646,5 +687,212 @@ export function heldBroom() {
   const k = new Kit()
   k.add(cyl(4), PAL.woodLight, T(0, -1.1, 0, 0, 0, 0, 0.04, 1.3, 0.04))
   k.add(cone(6), PAL.awningOchre, T(0, -1.05, 0, Math.PI, 0, 0, 0.26, 0.34, 0.26))
+  return k.build()
+}
+
+// ------------------------------------------------------------------ ground cover and more growth
+
+/** A tuft of grass: a few blades. */
+export function tuft(r: R, col = PAL.floorGrass) {
+  const k = new Kit()
+  const n = 4 + Math.floor(r() * 3)
+  for (let i = 0; i < n; i++) {
+    const h = 0.25 + r() * 0.35
+    k.add(cone(3), i % 2 ? col : PAL.maquis, T((r() - 0.5) * 0.3, 0, (r() - 0.5) * 0.3, (r() - 0.5) * 0.5, r() * 3, (r() - 0.5) * 0.5, 0.06, h, 0.06), { tone: 0.85 + r() * 0.3 })
+  }
+  return k.build()
+}
+
+/** Wildflowers: yellow, violet or white only (never red; see art-direction.md). */
+export function flowers(r: R, head: string) {
+  const k = new Kit()
+  const n = 3 + Math.floor(r() * 3)
+  for (let i = 0; i < n; i++) {
+    const x = (r() - 0.5) * 0.45
+    const z = (r() - 0.5) * 0.45
+    const h = 0.18 + r() * 0.25
+    k.add(cone(3), PAL.maquis, T(x, 0, z, 0, r() * 3, 0, 0.05, h, 0.05))
+    k.add(new THREE.OctahedronGeometry(0.5, 0), head, T(x, h, z, 0, r() * 3, 0, 0.1, 0.06, 0.1), { tone: 0.95 + r() * 0.1 })
+  }
+  return k.build()
+}
+
+/** A fig: pale grey trunk, low spreading limbs, big bright leaves. */
+export function fig(r: R) {
+  const k = new Kit()
+  const h = 2.2 + r() * 1
+  for (let a = 0; a < 3; a++) {
+    const ang = a * 2.1 + r()
+    k.add(cyl(5, 0.6), '#A8A194', T(0, 0, 0, Math.cos(ang) * 0.5, 0, Math.sin(ang) * 0.5, 0.26, h, 0.26))
+  }
+  for (let b = 0; b < 6; b++) {
+    const a = b * 1.05 + r() * 0.5
+    const d = 1 + r() * 1
+    const s = 1.4 + r() * 0.8
+    k.add(ico(0), b % 2 ? '#7E9A56' : '#6E8A4C', T(Math.cos(a) * d, h + r() * 0.6, Math.sin(a) * d, 0, r() * 3, 0, s * 1.3, s * 0.7, s * 1.3), { jitter: 0.2, tone: 0.9 + r() * 0.2 })
+  }
+  return k.build()
+}
+
+/** A carob: dark, dense and round. */
+export function carob(r: R) {
+  const k = new Kit()
+  const h = 2.6 + r() * 1.2
+  k.add(cyl(5, 0.7), PAL.oliveTrunk, T(0, 0, 0, 0.05, 0, 0.05, 0.45, h * 0.6, 0.45))
+  k.add(ico(1), '#4E6446', T(0, h, 0, 0, r() * 3, 0, 4 + r(), 3 + r() * 0.6, 4 + r()), { jitter: 0.25, tone: 0.9 + r() * 0.15 })
+  k.add(ico(0), '#5E7652', T(0.4, h + 0.9, -0.2, 0, r() * 3, 0, 2.6, 1.4, 2.6), { tone: 1 })
+  return k.build()
+}
+
+// ------------------------------------------------------------------ canyon, hillside, quay props
+
+/** A little wayside shrine: a stone post with a roofed niche and flowers at its foot. */
+export function shrine() {
+  const k = new Kit()
+  k.add(box(), PAL.stoneB, T(0, -0.5, 0, 0, 0, 0, 0.8, 2.3, 0.7))
+  k.add(box(), '#3A3F44', T(0, 1.05, 0.3, 0, 0, 0, 0.44, 0.55, 0.12))
+  k.add(box(), PAL.stoneA, T(0, 1.75, 0, 0, 0, 0, 1.0, 0.1, 0.9))
+  k.add(pyramid(), PAL.roofB, T(0, 1.85, 0, 0, 0, 0, 1.0, 0.5, 0.9))
+  // a jar of white and yellow flowers someone keeps fresh
+  k.add(cyl(6, 1.2), PAL.stoneC, T(0.25, 0, 0.6, 0, 0, 0, 0.2, 0.25, 0.2))
+  for (let i = 0; i < 4; i++) k.add(new THREE.OctahedronGeometry(0.5, 0), i % 2 ? PAL.towelB : PAL.towelA, T(0.25 + Math.cos(i * 1.6) * 0.07, 0.35, 0.6 + Math.sin(i * 1.6) * 0.07, 0, 0, 0, 0.1, 0.07, 0.1))
+  return k.build()
+}
+
+/** Low broken walls of a hut long fallen in, w x d, on sloping ground. */
+export function ruin(w: number, d: number, r: R, ground: (x: number, z: number) => number, cx: number, cz: number, yaw: number) {
+  const k = new Kit()
+  const c = Math.cos(yaw)
+  const s = Math.sin(yaw)
+  const edges: [number, number, number, number][] = [
+    [-w / 2, -d / 2, w / 2, -d / 2],
+    [w / 2, -d / 2, w / 2, d / 2],
+    [w / 2, d / 2, -w / 2, d / 2],
+    [-w / 2, d / 2, -w / 2, -d / 2],
+  ]
+  for (const [x0, z0, x1, z1] of edges) {
+    const L = Math.hypot(x1 - x0, z1 - z0)
+    const n = Math.floor(L / 0.8)
+    for (let i = 0; i < n; i++) {
+      const t = (i + 0.5) / n
+      const lx = x0 + (x1 - x0) * t
+      const lz = z0 + (z1 - z0) * t
+      const x = lx * c + lz * s
+      const z = -lx * s + lz * c
+      // standing to shoulder height in places, rubble in others
+      const rows = Math.max(0, Math.round(1 + Math.sin(i * 1.7 + x0) * 1.4 + r() * 1.2))
+      const y = ground(cx + x, cz + z)
+      for (let q = 0; q < rows; q++) {
+        const sz = 0.55 + r() * 0.3
+        k.add(ico(0), q % 2 ? PAL.rockGrey : PAL.limeB, T(x + (r() - 0.5) * 0.15, y + q * 0.42 + 0.15, z, 0, yaw + r(), 0, sz * 1.3, sz * 0.8, sz), { tone: 0.8 + r() * 0.25 })
+      }
+      if (rows === 0 && r() < 0.5) k.add(ico(0), PAL.limeB, T(x + (r() - 0.5) * 0.6, y + 0.08, z + (r() - 0.5) * 0.6, r(), r(), 0, 0.5, 0.3, 0.5), { tone: 0.85 })
+    }
+  }
+  return k.build()
+}
+
+/** A row of beehives on a stone bench: white boxes with ochre roofs. */
+export function beehives(n: number, r: R) {
+  const k = new Kit()
+  k.add(box(), PAL.stoneC, T(0, 0, 0, 0, 0, 0, n * 0.75 + 0.3, 0.35, 0.8))
+  for (let i = 0; i < n; i++) {
+    const x = (i - (n - 1) / 2) * 0.75
+    const h = 0.55 + Math.floor(r() * 2) * 0.22
+    k.add(box(), i % 3 === 1 ? PAL.clothB : PAL.clothA, T(x, 0.35, 0, 0, (r() - 0.5) * 0.1, 0, 0.55, h, 0.55))
+    k.add(box(), PAL.awningOchre, T(x, 0.35 + h, 0, 0, 0, 0, 0.64, 0.07, 0.64))
+    k.add(box(), '#3A3F44', T(x, 0.4, 0.28, 0, 0, 0, 0.25, 0.04, 0.02))
+  }
+  return k.build()
+}
+
+/** Fish crates stacked on the quay. */
+export function crates(r: R) {
+  const k = new Kit()
+  const n = 3 + Math.floor(r() * 4)
+  for (let i = 0; i < n; i++) {
+    const col = i % 3
+    const row = Math.floor(i / 3)
+    k.add(box(), i % 2 ? PAL.woodLight : PAL.wood, T((col - 1) * 0.66 + (r() - 0.5) * 0.08, row * 0.3, (r() - 0.5) * 0.1, 0, (r() - 0.5) * 0.15, 0, 0.62, 0.28, 0.44), { tone: 0.9 + r() * 0.2 })
+  }
+  return k.build()
+}
+
+/** A dry fountain: a stone basin with nothing in it but leaves. */
+export function dryFountain() {
+  const k = new Kit()
+  k.add(cyl(8), PAL.stoneB, T(0, 0, 0, 0, 0, 0, 3.0, 0.65, 3.0))
+  k.add(cyl(8), PAL.stoneD, T(0, 0.5, 0, 0, 0, 0, 2.6, 0.08, 2.6), { tone: 0.85 })
+  k.add(cyl(6), PAL.stoneA, T(0, 0, 0, 0, 0, 0, 0.5, 1.5, 0.5))
+  k.add(box(), PAL.stoneA, T(0, 1.5, 0, 0, 0.4, 0, 0.8, 0.5, 0.8))
+  for (let i = 0; i < 6; i++) k.add(ico(0), PAL.needles, T(Math.cos(i) * 0.9, 0.58, Math.sin(i * 1.3) * 0.8, 0, i, 0, 0.18, 0.04, 0.12))
+  return k.build()
+}
+
+/** A covered passage over an alley: a room on a stone arch, span across `w`, front at +z. */
+export function alleyArch(w: number, wall: string, roof: string) {
+  const k = new Kit()
+  const D = 2.6
+  const spring = 2.5
+  const rise = Math.min(1.0, w * 0.3)
+  const y0 = spring + rise
+  k.add(box(), wall, T(0, y0, 0, 0, 0, 0, w, 2.8, D), { tone: 0.97 })
+  // the arch: stones round a flattened half circle, springing from both house walls
+  const n = 7
+  for (let i = 0; i < n; i++) {
+    const a0 = Math.PI - (i / n) * Math.PI
+    const a1 = Math.PI - ((i + 1) / n) * Math.PI
+    const x0 = Math.cos(a0) * (w / 2)
+    const y0a = spring + Math.sin(a0) * rise
+    const x1 = Math.cos(a1) * (w / 2)
+    const y1 = spring + Math.sin(a1) * rise
+    const L = Math.hypot(x1 - x0, y1 - y0a)
+    k.add(box(), wall, T((x0 + x1) / 2, (y0a + y1) / 2 - 0.02, 0, 0, 0, Math.atan2(y1 - y0a, x1 - x0), L + 0.06, 0.3, D), { tone: 0.82 })
+    // fill above each stone up to the room
+    k.add(box(), wall, T((x0 + x1) / 2, Math.max(y0a, y1), 0, 0, 0, 0, L, y0 - Math.max(y0a, y1) + 0.05, D), { tone: 0.95 })
+  }
+  k.add(pyramid(), roof, T(0, y0 + 2.8, 0, 0, 0, 0, w + 0.4, 1.2, D + 0.4))
+  for (const sd of [-1, 1]) {
+    k.add(box(), '#3A3F44', T(w * 0.2 * sd, y0 + 1.0, D / 2, 0, 0, 0, 0.6, 0.9, 0.05))
+    k.add(box(), '#3A3F44', T(w * 0.2 * sd, y0 + 1.0, -D / 2, 0, 0, 0, 0.6, 0.9, 0.05))
+  }
+  return k.build()
+}
+
+/** Flower boxes on a sill: yellow, violet or white. */
+export function flowerBox(r: R) {
+  const k = new Kit()
+  k.add(box(), PAL.wood, T(0, 0, 0, 0, 0, 0, 0.8, 0.18, 0.22))
+  k.add(box(), PAL.maquis, T(0, 0.14, 0, 0, 0, 0, 0.74, 0.16, 0.2), { tone: 0.9 + r() * 0.2 })
+  const heads = [PAL.flowerYellow, PAL.flowerViolet, PAL.flowerWhite]
+  const hc = heads[Math.floor(r() * 3)]
+  for (let i = 0; i < 3; i++) k.add(new THREE.OctahedronGeometry(0.5, 0), hc, T(-0.25 + i * 0.25, 0.32, 0.03, 0, 0, 0, 0.1, 0.07, 0.1))
+  return k.build()
+}
+
+/** A charcoal burner's mound, sealed with earth, and a stack of cut wood. */
+export function kiln(r: R) {
+  const k = new Kit()
+  k.add(ico(1), '#5E564C', T(0, 0.2, 0, 0, 0, 0, 4.2, 2.2, 4.2), { jitter: 0.15, tone: 0.95 })
+  k.add(ico(0), PAL.needlesDark, T(0, 1.3, 0, 0, 0, 0, 1.2, 0.5, 1.2), { tone: 0.8 })
+  for (let row = 0; row < 3; row++)
+    for (let i = 0; i < 4 - row; i++)
+      k.add(cyl(5), i % 2 ? PAL.pineTrunk : PAL.woodLight, T(3.2 + i * 0.3 + row * 0.15, row * 0.28, 1.2, Math.PI / 2, 0.1 * (r() - 0.5), 0, 0.28, 1.8, 0.28))
+  return k.build()
+}
+
+/** A dog's water bowl by someone's door. */
+export function dogBowl() {
+  const k = new Kit()
+  k.add(cyl(8, 1.25), PAL.shutterBlue, T(0, 0, 0, 0, 0, 0, 0.36, 0.1, 0.36))
+  k.add(cyl(8), PAL.riverShallow, T(0, 0.07, 0, 0, 0, 0, 0.36, 0.02, 0.36))
+  return k.build()
+}
+
+/** A flat swimming rock, sloping into the water. */
+export function slab(r: R) {
+  const k = new Kit()
+  k.add(ico(0), PAL.limeC, T(0, 0, 0, 0.1, r() * 3, 0.06, 4.2, 1.1, 3.0), { jitter: 0.2 })
+  k.add(ico(0), PAL.limeA, T(1.4, -0.1, 0.8, 0.2, r() * 3, 0, 2.0, 0.9, 1.6), { jitter: 0.2 })
   return k.build()
 }

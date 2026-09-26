@@ -1,0 +1,21 @@
+{
+ "label": "before",
+ "note": "Measured on commit 577b132 plus the beat log only (no behaviour change). Beats: autopilot, a dog stop counted once when first seen within 45 m.",
+ "beats": [
+  { "ch": 1, "seconds": 143.9, "beats": 8, "median": 18.4, "max": 32.4, "over25": 2, "kinds": { "dog": 8 } },
+  { "ch": 2, "seconds": 213.7, "beats": 15, "median": 12.5, "max": 31.4, "over25": 2, "kinds": { "dog": 6, "thing": 5, "folk": 4 } },
+  { "ch": 3, "seconds": 143.6, "beats": 6, "median": 21.1, "max": 30.5, "over25": 3, "kinds": { "dog": 6 } },
+  { "ch": 4, "seconds": 81.9, "beats": 1, "median": 76.5, "max": 76.5, "over25": 1, "kinds": { "dog": 1 } }
+ ],
+ "perf": [
+  { "ch": 1, "progress": 0.13, "triangles": 179280, "calls": 200 },
+  { "ch": 1, "progress": 0.5, "triangles": 171440, "calls": 182 },
+  { "ch": 1, "progress": 0.95, "triangles": 404676, "calls": 246 },
+  { "ch": 2, "progress": 0.15, "triangles": 589660, "calls": 276 },
+  { "ch": 2, "progress": 0.45, "triangles": 311544, "calls": 149 },
+  { "ch": 2, "progress": 0.8, "triangles": 1065360, "calls": 333 },
+  { "ch": 3, "progress": 0.3, "triangles": 805924, "calls": 218 },
+  { "ch": 3, "progress": 0.85, "triangles": 318588, "calls": 150 },
+  { "ch": 4, "progress": 0.51, "triangles": 196644, "calls": 123 }
+ ]
+}

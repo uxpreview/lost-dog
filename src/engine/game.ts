@@ -87,6 +87,10 @@ export class Game {
   rings = new Rings()
   motes = new Motes()
   life: Life
+  /** meshes only drawn near the camera (ground cover) */
+  private nearOnly: THREE.Mesh[] = []
+  /** tree chunks with a far build (userData.lod) */
+  private lods: THREE.Mesh[] = []
   /** small things scheduled in game time (a cat's answer after the dog's nose) */
   private later: { t: number; fn: () => void }[] = []
   folk: FolkRt[] = []
@@ -179,7 +183,12 @@ export class Game {
     s.add(buildSea(this.world))
     s.add(buildRivers(this.world))
     onProgress?.(0.7)
-    s.add(dress(this.world, quality))
+    const dressing = dress(this.world, quality)
+    s.add(dressing)
+    dressing.traverse((o) => {
+      if (o.userData.near) this.nearOnly.push(o as THREE.Mesh)
+      if (o.userData.lod) this.lods.push(o as THREE.Mesh)
+    })
     onProgress?.(0.9)
     this.buildHome()
     this.buildFolk()
@@ -420,7 +429,7 @@ export class Game {
   private updateAmbient(dt: number) {
     for (const a of this.ambient) {
       const d = Math.hypot(a.x - this.px, a.z - this.pz)
-      const near = d < 60
+      const near = d < 48
       for (const f of a.rigs) f.root.visible = near
       if (!near) continue
       a.t += dt
@@ -1386,6 +1395,16 @@ export class Game {
     cam.position.copy(this.camPos)
     cam.lookAt(this.camLook)
     // nothing past the fog is drawn; the sky rides with the camera
+    for (const m of this.nearOnly) {
+      const bs = (m as THREE.InstancedMesh).boundingSphere ?? m.geometry.boundingSphere
+      if (bs) m.visible = cam.position.distanceTo(bs.center) < m.userData.near + bs.radius
+    }
+    for (const m of this.lods) {
+      const bs = (m as THREE.InstancedMesh).boundingSphere!
+      const near = cam.position.distanceTo(bs.center) - bs.radius < 60
+      m.visible = near
+      ;(m.userData.lod as THREE.Mesh).visible = !near
+    }
     const far = Math.max(360, U.uFogFar.value * 1.05)
     if (Math.abs(cam.far - far) > far * 0.04) {
       cam.far = far
