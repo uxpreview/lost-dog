@@ -1,0 +1,241 @@
+{
+  "id": "ch3",
+  "title": "The Woods",
+  "bed": "woods",
+  "walkSpeed": 3.0,
+  "gait": "tired",
+  "surface": "needles",
+  "prints": true,
+  "whistle": "honest",
+  "map": false,
+  "main": [
+    [-398, -186, 33.6, 4],
+    [-412, -204, 33.8, 3.6],
+    [-432, -218, 37.0, 3.4],
+    [-458, -222, 40.2, 3.4],
+    [-484, -214, 44.4, 3.4],
+    [-504, -200, 44.5, 3.4],
+    [-518, -190, 48.6, 3.2],
+    [-524, -187, 48.6, 1.5],
+    [-531, -185, 48.6, 1.3],
+    [-538, -183, 48.6, 1.5],
+    [-546, -180, 48.6, 3.2],
+    [-564, -170, 49.9, 3.4],
+    [-586, -160, 48.5, 3.4],
+    [-604, -146, 48, 3.4],
+    [-616, -130, 47, 3.2],
+    [-622, -118, 46, 2.4],
+    [-628, -104, 44.5, 3.4],
+    [-638, -86, 41, 3.4],
+    [-650, -66, 36, 3.4],
+    [-662, -46, 33.6, 3.4],
+    [-670, -31, 29.5, 3.4],
+    [-678, -17, 24.5, 3.4],
+    [-685, -4, 18.5, 3.6],
+    [-692, 12, 10.6, 4.5],
+    [-698, 28, 7.2, 5]
+  ],
+  "branches": [
+    {
+      "_name": "the lookout",
+      "path": [
+        [-484, -214, 44.4],
+        [-490, -238, 45.5, 3],
+        [-498, -256, 46.2, 3]
+      ]
+    },
+    {
+      "_name": "the charcoal clearing",
+      "path": [
+        [-604, -146, 48],
+        [-584, -128, 47, 3],
+        [-572, -112, 46, 3]
+      ]
+    }
+  ],
+  "areas": [
+    {
+      "_name": "the lookout",
+      "circle": [-500, -262, 8],
+      "y": 46.2,
+      "surface": "needles"
+    },
+    {
+      "_name": "the charcoal clearing",
+      "circle": [-568, -106, 8],
+      "y": 46,
+      "surface": "needles"
+    },
+    {
+      "_name": "the treeline",
+      "circle": [-694, 18, 9],
+      "y": 10.2,
+      "surface": "sand"
+    }
+  ],
+  "pines": {
+    "density": 1.0,
+    "clear": 5
+  },
+  "dog": [
+    {
+      "type": "perch",
+      "at": [-460, -222],
+      "release": 20,
+      "pose": "stand"
+    },
+    {
+      "type": "hazard",
+      "at": [-548, -179],
+      "clear": [-541, -182],
+      "pose": "sit"
+    },
+    {
+      "type": "perch",
+      "at": [-600, -150],
+      "release": 16,
+      "pose": "stand"
+    },
+    {
+      "type": "hazard",
+      "at": [-624, -112],
+      "clear": [-623, -116],
+      "pose": "sit"
+    },
+    {
+      "type": "eyes",
+      "at": [-664, -42],
+      "release": 11,
+      "pose": "sit"
+    },
+    {
+      "type": "join",
+      "at": [-693, 16],
+      "pose": "sit",
+      "release": 2.6
+    }
+  ],
+  "props": [
+    {
+      "kind": "plank",
+      "from": [-521, 48.62, -188],
+      "to": [-541, 48.62, -182],
+      "width": 1.3
+    },
+    {
+      "kind": "drywall",
+      "path": [
+        [-700, -150],
+        [-660, -128],
+        [-626, -118],
+        [-619, -116],
+        [-580, -100],
+        [-540, -92]
+      ],
+      "gap": [-622.5, -117],
+      "height": 1.3
+    }
+  ],
+  "exit": [-693, 16, 3],
+  "landmarks": [
+    {
+      "id": "ravine",
+      "at": [-531, -185],
+      "r": 10,
+      "glyph": "plank"
+    },
+    {
+      "id": "old-wall",
+      "at": [-622, -117],
+      "r": 10,
+      "glyph": "wall"
+    },
+    {
+      "id": "lookout",
+      "at": [-500, -262],
+      "r": 9,
+      "glyph": "rim"
+    },
+    {
+      "id": "treeline",
+      "at": [-693, 16],
+      "r": 12,
+      "glyph": "pine"
+    }
+  ],
+  "lighting": [
+    {
+      "at": 0,
+      "sun": [256, 13],
+      "sunColor": "#FFB866",
+      "sunI": 1.45,
+      "skyTop": "#6E8FB4",
+      "skyHorizon": "#F6BE78",
+      "ambSky": "#A898B0",
+      "ambGround": "#A8845C",
+      "ambI": 0.68,
+      "fog": "#E8B07A",
+      "fogNear": 40,
+      "fogFar": 380,
+      "stars": 0,
+      "moon": 0
+    },
+    {
+      "at": 0.45,
+      "sun": [262, 1.5],
+      "sunColor": "#E8A67A",
+      "sunI": 0.9,
+      "skyTop": "#4A5680",
+      "skyHorizon": "#D9A27E",
+      "ambSky": "#6E6A92",
+      "ambGround": "#5E4A56",
+      "ambI": 0.62,
+      "fog": "#9A7A86",
+      "fogNear": 26,
+      "fogFar": 260,
+      "stars": 0.1,
+      "moon": 0
+    },
+    {
+      "at": 0.8,
+      "sun": [120, 14],
+      "sunColor": "#8FA2C8",
+      "sunI": 0.45,
+      "skyTop": "#1C2238",
+      "skyHorizon": "#3E4460",
+      "ambSky": "#4A5478",
+      "ambGround": "#2E3340",
+      "ambI": 0.62,
+      "fog": "#2C3248",
+      "fogNear": 12,
+      "fogFar": 150,
+      "stars": 0.7,
+      "moon": 0.3
+    },
+    {
+      "at": 1,
+      "sun": [150, 22],
+      "sunColor": "#A8B8D8",
+      "sunI": 0.85,
+      "skyTop": "#1E2A46",
+      "skyHorizon": "#3E5270",
+      "ambSky": "#5A6A90",
+      "ambGround": "#343C50",
+      "ambI": 0.78,
+      "fog": "#34425E",
+      "fogNear": 30,
+      "fogFar": 420,
+      "stars": 0.9,
+      "moon": 0.8
+    }
+  ],
+  "cameras": [
+    {
+      "_name": "the moon on the sea",
+      "trigger": [-693, 15, 6],
+      "position": [-688, 15.5, 1],
+      "lookAt": [-706, 5, 60],
+      "fov": 50
+    }
+  ]
+}
