@@ -22,6 +22,8 @@ export const U = {
   uSkyHorizon: { value: new THREE.Color(0.9, 0.9, 0.8) },
   uStars: { value: 0 },
   uMoon: { value: 0 },
+  // plan positions of the boy (xy) and the dog (zw): brush and grass part for them
+  uPush: { value: new THREE.Vector4(1e5, 1e5, 1e5, 1e5) },
 }
 
 const VERT = /* glsl */ `
@@ -30,6 +32,11 @@ const VERT = /* glsl */ `
 #include <shadowmap_pars_vertex>
 uniform float uTime;
 uniform float uWind;
+uniform float uWindBase;
+uniform vec4 uPush;
+#ifdef USE_HANG
+attribute float aHang;
+#endif
 varying vec3 vWorldPos;
 varying float vViewDist;
 varying vec3 vNormalW;
@@ -45,11 +52,43 @@ void main() {
     #ifdef USE_INSTANCING
       base = instanceMatrix[3].xyz;
     #endif
-    float hgt = max(transformed.y - 1.2, 0.0);
+    float hgt = max(transformed.y - uWindBase, 0.0);
     float ph = base.x * 0.13 + base.z * 0.17;
     float sway = sin(uTime * 1.3 + ph) * 0.6 + sin(uTime * 2.7 + ph * 1.7) * 0.25;
     transformed.x += sway * hgt * hgt * 0.004 * uWind;
     transformed.z += cos(uTime * 1.1 + ph) * hgt * hgt * 0.003 * uWind;
+    // low growth parts for whoever walks through it, and springs back
+    if (uWindBase < 0.5) {
+      mat3 im = mat3(1.0);
+      vec3 wpos = transformed;
+      #ifdef USE_INSTANCING
+        im = mat3(instanceMatrix);
+        wpos = (instanceMatrix * vec4(transformed, 1.0)).xyz;
+      #endif
+      wpos = (modelMatrix * vec4(wpos, 1.0)).xyz;
+      vec2 push = vec2(0.0);
+      for (int i = 0; i < 2; i++) {
+        vec2 who = i == 0 ? uPush.xy : uPush.zw;
+        vec2 d = wpos.xz - who;
+        float l = length(d);
+        float r = i == 0 ? 1.5 : 1.0;
+        push += (l > 0.001 ? d / l : vec2(0.0)) * smoothstep(r, 0.2, l) * (i == 0 ? 0.9 : 0.6);
+      }
+      vec3 wd = vec3(push.x, -length(push) * 0.35, push.y) * min(hgt, 1.6);
+      // back into the instance's own frame (uniform scale: R^T d / s)
+      float sc2 = dot(im[0], im[0]);
+      transformed += (transpose(im) * wd) / max(sc2, 1e-4);
+    }
+  }
+  #endif
+  #ifdef USE_HANG
+  {
+    // washing lifts and flaps in the sea breeze, more the further it hangs
+    float ph = position.x * 0.31 + position.z * 0.27;
+    float f = sin(uTime * 2.4 + ph) * 0.6 + sin(uTime * 5.3 + ph * 2.1) * 0.25;
+    transformed.x += f * aHang * 0.22;
+    transformed.z += cos(uTime * 1.9 + ph) * aHang * 0.12;
+    transformed.y += abs(f) * aHang * aHang * 0.08;
   }
   #endif
   #include <project_vertex>
@@ -129,6 +168,10 @@ export interface WorldMatOpts {
   color?: THREE.ColorRepresentation
   vertexColors?: boolean
   wind?: number
+  /** height above which things sway: trees 1.2 m, grass and brush 0 (and they part) */
+  windBase?: number
+  /** washing: vertices flap by their aHang attribute */
+  hang?: boolean
   smooth?: boolean
   emissive?: THREE.ColorRepresentation
   windows?: boolean
@@ -143,6 +186,7 @@ export function worldMaterial(o: WorldMatOpts = {}) {
   if (o.wind) defines.USE_WIND = ''
   if (o.smooth) defines.SMOOTH = ''
   if (o.windows) defines.WINDOWS = ''
+  if (o.hang) defines.USE_HANG = ''
   const m = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([
       THREE.UniformsLib.lights,
@@ -151,6 +195,7 @@ export function worldMaterial(o: WorldMatOpts = {}) {
         uEmissive: { value: new THREE.Color(o.emissive ?? 0x000000) },
         uOpacity: { value: o.opacity ?? 1 },
         uWind: { value: o.wind ?? 0 },
+        uWindBase: { value: o.windBase ?? 1.2 },
       },
     ]),
     vertexShader: VERT,
@@ -175,6 +220,7 @@ export function worldMaterial(o: WorldMatOpts = {}) {
     uTime: U.uTime,
     uWindow: U.uWindow,
     uNight: U.uNight,
+    uPush: U.uPush,
   })
   if (o.windows) m.vertexColors = true
   return m

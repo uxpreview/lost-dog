@@ -11,6 +11,16 @@
 //   gate      goes ahead and sits in front of home
 //   nearmiss  lets the boy close in, then the staged almost
 //
+// and, between the stops, the things a dog does on a walk (asides):
+//
+//   business     drinks, digs, sniffs off the path and back, rolls, shakes
+//                off the ford, chases a butterfly two bounds, noses a cat
+//   invite       a play-bow and a bark when the boy is far behind
+//   double-back  comes back toward the boy a few meters, checks, goes on
+//
+// Asides never wait for the boy. In company (the shore) he leaves heel for
+// them when the boy comes level, and comes back to heel after.
+//
 // Between nodes he trots. If the boy falls far behind he stops and waits
 // (sitting, looking back) rather than being dragged: never rubber-banding.
 // He is never in danger and nothing here can harm him.
@@ -18,7 +28,7 @@
 import * as THREE from 'three'
 import { DogRig, type DogAct, type DogGait } from './characters'
 import { Polyline } from './path'
-import type { DogNode } from './types'
+import type { BusinessAct, DogNode } from './types'
 import type { World } from './world'
 import { angleDiff, clamp, damp, dampAngle } from './noise'
 
@@ -49,14 +59,22 @@ export type DogEvent =
   | { type: 'eyes' }
   | { type: 'visit'; npc: string }
   | { type: 'pawstep'; x: number; y: number; z: number }
+  | { type: 'act'; act: BusinessAct | 'invite' | 'double-back'; x: number; z: number; node: DogNode }
+  | { type: 'bark'; x: number; y: number; z: number }
 
 interface NodeRt {
   node: DogNode
   s: number
   clearS: number
+  done: boolean
 }
 
-type Mode = 'heel' | 'stare' | 'run' | 'pause' | 'wait' | 'extra' | 'nearmiss' | 'escape' | 'vista' | 'companion' | 'home'
+type Mode = 'heel' | 'stare' | 'run' | 'pause' | 'wait' | 'extra' | 'nearmiss' | 'escape' | 'vista' | 'companion' | 'home' | 'aside'
+
+const isAside = (n: DogNode) => n.type === 'business' || n.type === 'invite' || n.type === 'double-back'
+
+/** How long each business takes once he is at the spot. */
+const ACT_DUR: Record<BusinessAct, number> = { drink: 3.2, dig: 3, sniff: 2.6, roll: 3.2, shake: 1.4, butterfly: 3.2, cat: 3.4 }
 
 const TROT = 3.9
 const BOUND = 6.6
@@ -85,13 +103,20 @@ export class DogActor {
   released = false
   private lookBackVariant = 0
   private lastLook = 0
+  // the aside in progress
+  private aside: NodeRt | null = null
+  private asidePhase = 0
+  private asideBack: Mode = 'run'
+  private backTo: [number, number] = [0, 0]
 
   setChapter(nodes: DogNode[], line: Polyline, continuing: boolean) {
     this.nodes = nodes.map((node) => ({
       node,
       s: line.project(node.at[0], node.at[1]),
       clearS: node.type === 'hazard' ? line.project(node.clear[0], node.clear[1]) : 0,
+      done: false,
     }))
+    this.aside = null
     this.ni = 0
     this.extra = null
     this.es = 0
@@ -122,6 +147,8 @@ export class DogActor {
   }
 
   get node() {
+    // asides already done in company are behind him
+    while (this.nodes[this.ni]?.done) this.ni++
     return this.nodes[this.ni]
   }
 
@@ -195,6 +222,20 @@ export class DogActor {
         if (this.mode === 'companion' && n?.node.type === 'heel' && n.node.until.progress !== undefined && c.progress >= n.node.until.progress) {
           this.advance(c)
         }
+        // in company, asides happen as the boy comes level with them
+        if (this.mode === 'companion') {
+          const a = this.nodes.find((r, i) => i > this.ni && !r.done && isAside(r.node) && c.boyS >= r.s - 12 && c.boyS < r.s + 6)
+          if (a) this.startAside(a, 'companion', c)
+        }
+        break
+      }
+      case 'aside': {
+        const r = this.updateAside(dt, c, dBoy)
+        moveTo = r.moveTo
+        speedWant = r.speed
+        pose = r.pose
+        faceBoy = r.faceBoy
+        lookAtBoy = r.lookAtBoy
         break
       }
       case 'stare': {
@@ -226,11 +267,22 @@ export class DogActor {
           this.lookBack(c, true)
           break
         }
+        // anything the boy is already past is behind them both: he goes on
+        if (n.node.type !== 'nearmiss' && n.node.type !== 'join' && n.node.type !== 'gate' && n.s < c.boyS - 1.5) {
+          if (isAside(n.node)) n.done = true
+          this.ni++
+          break
+        }
         const targetS = n.s
         this.boundT -= dt
         speedWant = this.boundT > 0 ? BOUND : TROT
-        if (dBoy < 9 && this.boundT <= 0) speedWant = TROT * 1.12
-        pose = this.boundT > 0.5 ? 'bound' : 'trot'
+        // he keeps his lead: close behind or level with him, he bounds on ahead
+        const lead = this.s - c.boyS
+        if (this.boundT <= 0) {
+          if (lead < 3) speedWant = BOUND
+          else if (lead < 14) speedWant = TROT * (1.12 + (1 - lead / 14) * 0.45)
+        }
+        pose = this.boundT > 0.5 || speedWant > 5.2 ? 'bound' : 'trot'
         // his place on the route never runs ahead of his body
         const bodyS = c.line.project(this.x, this.z)
         this.s = Math.min(targetS, this.s + this.speed * dt, bodyS + 4)
@@ -369,7 +421,8 @@ export class DogActor {
         const step = Math.min(d, this.speed * dt)
         let nx = this.x + (dx / d) * step
         let nz = this.z + (dz / d) * step
-        if (this.mode === 'heel' || this.mode === 'companion') [nx, nz] = c.world.constrain(this.x, this.z, nx, nz, c.ci)
+        // at heel he keeps to the way; coming back from an aside off it, he walks straight back
+        if ((this.mode === 'heel' || this.mode === 'companion') && c.world.walkable(this.x, this.z, c.ci)) [nx, nz] = c.world.constrain(this.x, this.z, nx, nz, c.ci)
         this.x = nx
         this.z = nz
         if (this.speed > 0.3) this.yaw = dampAngle(this.yaw, Math.atan2(dx, dz), 8, dt)
@@ -420,6 +473,10 @@ export class DogActor {
 
   private arrive(c: DogCtx) {
     const n = this.node
+    if (isAside(n.node)) {
+      this.startAside(n, 'run', c)
+      return
+    }
     this.emit({ type: 'arrive', node: n.node })
     this.holdT = 0
     if (n.node.type === 'nearmiss') {
@@ -441,6 +498,158 @@ export class DogActor {
     this.rig.play(Math.random() < 0.5 ? 'turn' : 'bow', 1.2)
     void c
   }
+
+  private startAside(n: NodeRt, back: Mode, c: DogCtx) {
+    this.aside = n
+    this.asidePhase = 0
+    this.asideBack = back
+    this.holdT = 0
+    this.mode = 'aside'
+    this.backTo = [this.x, this.z]
+    const nd = n.node
+    if (nd.type === 'double-back') {
+      // a few meters back toward the boy, never past him
+      const back = nd.back ?? 7
+      const d = Math.hypot(c.boyX - this.x, c.boyZ - this.z)
+      const k = Math.min(back, Math.max(0, d - 3.5)) / Math.max(d, 0.01)
+      this.backTo = [this.x + (c.boyX - this.x) * k, this.z + (c.boyZ - this.z) * k]
+    }
+  }
+
+  private endAside(c: DogCtx) {
+    const n = this.aside!
+    n.done = true
+    this.aside = null
+    this.mode = this.asideBack
+    if (this.mode === 'run') {
+      this.ni = this.nodes.indexOf(n) + 1
+      this.s = c.line.project(this.x, this.z)
+      this.lookTimer = 2.5
+    }
+  }
+
+  private updateAside(dt: number, c: DogCtx, dBoy: number) {
+    const n = this.aside!
+    const nd = n.node
+    const out = { moveTo: null as [number, number] | null, speed: 0, pose: 'stand' as DogGait, faceBoy: false, lookAtBoy: false }
+    this.holdT += dt
+    const at = nd.at
+    const toSpot = Math.hypot(at[0] - this.x, at[1] - this.z)
+    if (nd.type === 'invite') {
+      // he stops, turns to the boy; if the boy is far, the whole invitation
+      if (this.asidePhase === 0) {
+        // an invitation is for someone who can see it
+        if (dBoy > 40 && this.holdT < 25) {
+          out.faceBoy = true
+          out.pose = this.holdT > 2 ? 'sit' : 'stand'
+          return out
+        }
+        this.asidePhase = 1
+        this.holdT = 0
+        this.emit({ type: 'act', act: 'invite', x: this.x, z: this.z, node: nd })
+      }
+      out.faceBoy = true
+      out.lookAtBoy = true
+      const far = nd.far ?? 16
+      const inviting = dBoy > far
+      if (this.asidePhase === 1 && this.holdT > 0.5) {
+        this.asidePhase = 2
+        this.rig.play('bow', 1.3)
+        this.excite = 1
+        if (inviting) this.emit({ type: 'bark', x: this.x, y: this.y, z: this.z })
+      }
+      if (this.asidePhase === 2 && this.holdT > 2.1 && inviting && this.holdT < 2.3) {
+        this.asidePhase = 3
+        this.rig.play('bounce', 0.9)
+      }
+      if (this.holdT > (inviting ? 3.4 : 2)) {
+        this.rig.play('turn', 0.8)
+        this.endAside(c)
+      }
+      return out
+    }
+    if (nd.type === 'double-back') {
+      const d = Math.hypot(this.backTo[0] - this.x, this.backTo[1] - this.z)
+      if (this.asidePhase === 0) {
+        if (d > 0.5 && this.holdT < 4) {
+          out.moveTo = this.backTo
+          out.speed = TROT * 0.85
+          out.pose = 'trot'
+          return out
+        }
+        this.asidePhase = 1
+        this.holdT = 0
+        this.emit({ type: 'act', act: 'double-back', x: this.x, z: this.z, node: nd })
+        this.rig.play('glance', 1.1)
+      }
+      out.faceBoy = true
+      out.lookAtBoy = true
+      if (this.holdT > 1.5) {
+        this.rig.play('turn', 0.8)
+        this.endAside(c)
+      }
+      return out
+    }
+    // business: go to the spot, do it, come back to the way
+    const b = nd as Extract<DogNode, { type: 'business' }>
+    // if the boy has walked on past him, whatever it was can wait
+    if (this.asidePhase < 2 && (this.asideBack === 'run' ? c.boyS > n.s + 4 : dBoy > 16 && c.boyS > n.s)) {
+      this.endAside(c)
+      return out
+    }
+    if (this.asidePhase === 0) {
+      if (toSpot > 0.45 && this.holdT < 8) {
+        out.moveTo = [at[0], at[1]]
+        const sniffing = b.act === 'sniff'
+        out.speed = sniffing ? 1.6 : Math.min(TROT, 1.2 + toSpot * 1.5)
+        out.pose = sniffing ? 'walk' : 'trot'
+        if (sniffing && this.rig.act !== 'sniff') this.rig.play('sniff', 8)
+        return out
+      }
+      // he does it where the boy can see: until then he noses about the spot
+      if (this.asideBack === 'run' && dBoy > 26 && this.holdT < 25) {
+        if (this.rig.act !== 'sniff') this.rig.play('sniff', 3)
+        if (this.lookTimer <= 0) {
+          this.lookTimer = 2.5
+          this.lookBack(c, true)
+        }
+        this.lookTimer -= dt
+        return out
+      }
+      this.asidePhase = 1
+      this.holdT = 0
+      const act = b.act === 'butterfly' ? 'leap' : b.act === 'cat' ? 'nose' : b.act
+      this.rig.play(act, b.dur ?? ACT_DUR[b.act])
+      this.emit({ type: 'act', act: b.act, x: this.x, z: this.z, node: nd })
+      if (b.prop) this.yawTo = Math.atan2(b.prop[0] - this.x, b.prop[1] - this.z)
+    }
+    const dur = b.dur ?? ACT_DUR[b.act]
+    if (this.asidePhase === 1) {
+      if (b.act === 'butterfly') {
+        // two bounds after it, and he gives up
+        const t = this.holdT
+        if (t < 1.4) {
+          out.moveTo = [this.x + Math.sin(this.yaw) * 2, this.z + Math.cos(this.yaw) * 2]
+          out.speed = 3.2
+          out.pose = 'bound'
+        }
+      }
+      if (this.yawTo !== null) this.yaw = dampAngle(this.yaw, this.yawTo, 5, dt)
+      if (this.holdT > dur) {
+        this.asidePhase = 2
+        this.holdT = 0
+        this.yawTo = null
+        this.lookBack(c, true)
+      }
+      return out
+    }
+    // a look back, then on
+    out.lookAtBoy = true
+    if (this.holdT > 0.7) this.endAside(c)
+    return out
+  }
+
+  private yawTo: number | null = null
 
   /** After the collar slips: bound away along the near-miss path. */
   escape() {

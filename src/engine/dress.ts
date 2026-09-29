@@ -12,6 +12,13 @@ import { worldMaterial } from './materials'
 
 const CHUNK = 120
 
+/** Low washing lines over the alleys: the boy ducks under these. Plan segment and height. */
+export const duckLines: { x0: number; z0: number; x1: number; z1: number; y: number }[] = []
+/** Brush and reed beds on the way: he pushes through, they part. */
+export const brushPatches: { x: number; z: number; r: number; kind: string }[] = []
+/** The fronts of the town's houses, for people who lean out of windows. */
+export const houseFronts: { x: number; z: number; yaw: number; base: number; floors: number; w: number }[] = []
+
 interface Inst {
   x: number
   y: number
@@ -22,8 +29,11 @@ interface Inst {
 
 class Scatter {
   buckets = new Map<string, Inst[]>()
+  constructor(private chunk = CHUNK) {}
   add(variant: string, i: Inst) {
-    const key = `${variant}|${Math.floor(i.x / CHUNK)}|${Math.floor(i.z / CHUNK)}`
+    // shrubs and rocks are cheap to draw and many: bigger chunks, fewer calls
+    const c = this.chunk === CHUNK && (variant.startsWith('shrub') || variant.startsWith('rock') || variant.startsWith('grass')) ? CHUNK * 2 : this.chunk
+    const key = `${variant}|${Math.floor(i.x / c)}|${Math.floor(i.z / c)}`
     let b = this.buckets.get(key)
     if (!b) this.buckets.set(key, (b = []))
     b.push(i)
@@ -38,15 +48,29 @@ export function dress(w: World, quality: number): THREE.Group {
 
   const matTree = worldMaterial({ vertexColors: true, wind: 1 })
   const matStatic = worldMaterial({ vertexColors: true })
+  // low growth moves in the air and parts for the boy and the dog
+  const matLow = worldMaterial({ vertexColors: true, wind: 7, windBase: 0 })
 
-  const variants: Record<string, { geo: THREE.BufferGeometry; shadow: boolean; mat: THREE.Material }> = {}
+  const variants: Record<string, { geo: THREE.BufferGeometry; shadow: boolean; mat: THREE.Material; low?: THREE.BufferGeometry }> = {}
   const vr = rng(99)
-  for (let i = 0; i < 3; i++) variants['pine' + i] = { geo: K.umbrellaPine(vr), shadow: true, mat: matTree }
+  for (let i = 0; i < 3; i++) {
+    // near and far builds of the same tree, from the same draws
+    const seed = Math.floor(vr() * 1e9)
+    variants['pine' + i] = { geo: K.umbrellaPine(rng(seed)), low: K.umbrellaPine(rng(seed), true), shadow: true, mat: matTree }
+  }
   for (let i = 0; i < 2; i++) variants['cypress' + i] = { geo: K.cypress(vr), shadow: true, mat: matTree }
   for (let i = 0; i < 2; i++) variants['olive' + i] = { geo: K.olive(vr), shadow: true, mat: matTree }
-  for (let i = 0; i < 3; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matStatic }
-  for (let i = 0; i < 1; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matStatic }
+  for (let i = 0; i < 3; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matLow }
+  for (let i = 0; i < 1; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matLow }
   for (let i = 0; i < 2; i++) variants['rock' + i] = { geo: K.rock(vr, i % 2 ? PAL.limeA : PAL.rockGrey), shadow: false, mat: matStatic }
+  for (let i = 0; i < 2; i++) variants['fig' + i] = { geo: K.fig(vr), shadow: true, mat: matTree }
+  for (let i = 0; i < 2; i++) variants['carob' + i] = { geo: K.carob(vr), shadow: true, mat: matTree }
+  // ground cover: tufts everywhere, flowers in the light (never under the pines' shade)
+  for (let i = 0; i < 3; i++) variants['tuft' + i] = { geo: K.tuft(vr, i === 2 ? PAL.duneGrass : PAL.floorGrass), shadow: false, mat: matLow }
+  variants['flowerY'] = { geo: K.flowers(vr, PAL.flowerYellow), shadow: false, mat: matLow }
+  variants['flowerV'] = { geo: K.flowers(vr, PAL.flowerViolet), shadow: false, mat: matLow }
+  variants['flowerW'] = { geo: K.flowers(vr, PAL.flowerWhite), shadow: false, mat: matLow }
+  variants['needleTuft'] = { geo: K.tuft(vr, PAL.moss), shadow: false, mat: matLow }
 
   const pick = (base: string, n: number) => base + Math.floor(r() * n)
   const TOWN: [number, number] = [-280, -70]
@@ -85,15 +109,23 @@ export function dress(w: World, quality: number): THREE.Group {
           // plateau pines cluster along the rim, so the canyon has a skyline
           const nearRim = smoothstep(0.02, 0.0, wall) < 1 ? 1 : 0.6
           if (u < 0.055 * nearRim) v = pick('pine', 3)
+          else if (u < 0.068) (v = pick('carob', 2)), (needClear = 3)
           else if (u < 0.16) v = pick('shrub', 3)
           else if (u < 0.19) v = pick('rock', 2)
         } else if (wall > 0.25) {
           if (slope < 1.4 && u < 0.05) v = pick('shrub', 3)
           else if (u < 0.065 && slope < 0.9) v = pick('pine', 3), (s *= 0.7)
         } else {
+          const nearWater = w.riverClearance(px, pz) < 9
           if (u < 0.05) v = pick('shrub', 3)
           else if (u < 0.08) v = pick('rock', 2)
           else if (u < 0.092) (v = pick('pine', 3)), (needClear = 3.5)
+          else if (nearWater && u < 0.115) (v = pick('fig', 2)), (needClear = 2.5)
+          else if (wall > 0.05 && u < 0.14) {
+            // boulders come down off the walls and lie at their foot, in fields
+            v = pick('rock', 2)
+            s = 0.7 + r() * 1.6
+          }
         }
       } else if (woods) {
         if (u < 0.3 * quality ** 0.3) (v = pick('pine', 3)), (needClear = 2.6), (s = 0.85 + r() * 0.5)
@@ -105,7 +137,8 @@ export function dress(w: World, quality: number): THREE.Group {
         else if (u < 0.155 && h > 6) (v = pick('olive', 2)), (needClear = 2.5)
         else if (dc < 12 && u < 0.19) v = pick('rock', 2)
       } else if (hillside) {
-        if (u < 0.1) v = pick('shrub', 3)
+        if (u < 0.018) (v = pick('carob', 2)), (needClear = 3)
+        else if (u < 0.1) v = pick('shrub', 3)
         else if (u < 0.125) (v = pick('olive', 2)), (needClear = 2.5)
         else if (u < 0.14) (v = pick('pine', 3)), (needClear = 3)
         else if (u < 0.15) (v = pick('cypress', 2)), (needClear = 2.5)
@@ -120,13 +153,70 @@ export function dress(w: World, quality: number): THREE.Group {
       sc.add(v, { x: px, y: h - 0.15, z: pz, ry: r() * Math.PI * 2, s })
     }
 
+  // ---------------------------------------------------------------- ground cover
+  // Along every way he walks: tufts and wildflowers in a band either side,
+  // thickest at the edge and near water, thinning away. Nothing in the town.
+  const gc = new Scatter(48)
+  const gr = rng(777)
+  for (const wp of w.walks) {
+    if (wp.bridge) continue
+    const ch = w.chapters[wp.chapter]
+    if (ch.town) continue
+    const line = wp.line
+    const woods = ch.bed === 'woods'
+    const shore = ch.bed === 'shore'
+    for (let sPos = 0; sPos < line.length; sPos += 0.9 / Math.sqrt(quality)) {
+      const [tx, tz] = line.tangent(sPos, 2)
+      const half = line.e(1, sPos) * 0.5
+      for (const side of [-1, 1]) {
+        const off = half - 0.3 + Math.pow(gr(), 1.8) * 16
+        const along = (gr() - 0.5) * 1.2
+        const x = line.x(sPos) - tz * side * off + tx * along
+        const z = line.z(sPos) + tx * side * off + tz * along
+        const k = w.idx(Math.round((x - w.x0) / w.cell), Math.round((z - w.z0) / w.cell))
+        if (w.wet[k] > 0 || w.road[k] > 0 || w.coastD[k] < 2) continue
+        if (w.wall[k] > 0.45) continue
+        const water = w.riverClearance(x, z)
+        const lush = water < 8 ? 1.6 : 1
+        if (gr() > 0.75 * lush) continue
+        // not on another way (the open beach is fine, above the tide)
+        if (shore ? w.coastD[k] < 9 : w.walkClearance(x, z, 2) < -0.4) continue
+        const f = gr()
+        let v: string
+        if (woods) v = f < 0.12 ? 'flowerW' : 'needleTuft'
+        else if (shore) v = f < 0.1 ? 'flowerW' : 'tuft2'
+        else if (f < 0.1 * lush) v = 'flowerY'
+        else if (f < 0.16 * lush) v = 'flowerV'
+        else if (f < 0.2 * lush) v = 'flowerW'
+        else v = 'tuft' + Math.floor(gr() * 2)
+        gc.add(v, { x, y: w.ground(x, z) - 0.03, z, ry: gr() * 6.28, s: 1 + gr() * 0.8 })
+      }
+    }
+  }
+  // the areas' edges too (the swimming spot, the rim, the clearings)
+  for (const a of w.areas) {
+    if (!a.circle || w.chapters[a.chapter].town) continue
+    const [ax, az, ar] = a.circle
+    for (let i = 0; i < ar * 10; i++) {
+      const ang = gr() * Math.PI * 2
+      const d = ar * (0.7 + gr() * 0.6)
+      const x = ax + Math.cos(ang) * d
+      const z = az + Math.sin(ang) * d
+      const k = w.idx(Math.round((x - w.x0) / w.cell), Math.round((z - w.z0) / w.cell))
+      if (w.wet[k] > 0 || w.coastD[k] < 2) continue
+      const f = gr()
+      const v = w.chapters[a.chapter].bed === 'woods' ? (f < 0.3 ? 'flowerW' : 'needleTuft') : f < 0.15 ? 'flowerY' : f < 0.25 ? 'flowerV' : f < 0.32 ? 'flowerW' : 'tuft0'
+      gc.add(v, { x, y: w.ground(x, z) - 0.03, z, ry: gr() * 6.28, s: 0.8 + gr() * 0.6 })
+    }
+  }
+
   // ---------------------------------------------------------------- the town
   const ci = w.chapters.findIndex((c) => !!c.town)
   if (ci >= 0) buildTown(w, ci, root, sc, r)
 
   // ---------------------------------------------------------------- per-chapter props
   w.chapters.forEach((ch) => {
-    for (const p of ch.props ?? []) placeProp(w, p, root, matStatic, r)
+    for (const p of ch.props ?? []) placeProp(w, p, root, p.kind === 'reeds' || p.kind === 'brush' ? matLow : matStatic, r)
     if (ch.home) {
       const [gx, gy, gz] = ch.home.gate
       const [hx, , hz] = ch.home.house
@@ -142,11 +232,12 @@ export function dress(w: World, quality: number): THREE.Group {
 
   // ---------------------------------------------------------------- flush instances
   const dummy = new THREE.Object3D()
-  for (const [key, list] of sc.buckets) {
+  for (const [key, list] of [...sc.buckets, ...gc.buckets]) {
     const vname = key.split('|')[0]
     const v = variants[vname]
     if (!v) continue
     const im = new THREE.InstancedMesh(v.geo, v.mat, list.length)
+    im.name = vname
     list.forEach((it, n) => {
       dummy.position.set(it.x, it.y, it.z)
       dummy.rotation.set(0, it.ry, 0)
@@ -156,6 +247,20 @@ export function dress(w: World, quality: number): THREE.Group {
     })
     im.castShadow = v.shadow
     im.receiveShadow = true
+    if (v.low) {
+      // the far build of the same chunk; the game swaps them by distance
+      const lo = new THREE.InstancedMesh(v.low, v.mat, list.length)
+      lo.instanceMatrix.copy(im.instanceMatrix)
+      lo.castShadow = v.shadow
+      lo.receiveShadow = true
+      lo.computeBoundingSphere()
+      lo.name = vname + '-far'
+      lo.visible = false
+      im.userData.lod = lo
+      root.add(lo)
+    }
+    // ground cover is only worth drawing near the camera
+    if (vname.startsWith('tuft') || vname.startsWith('flower') || vname === 'needleTuft') im.userData.near = 70
     im.computeBoundingSphere()
     root.add(im)
   }
@@ -192,6 +297,7 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
   const roofs = [PAL.roofA, PAL.roofB, PAL.roofC, PAL.roofA]
   const shutters = [PAL.shutterGreen, PAL.shutterGrey, PAL.shutterBlue, PAL.shutterGreen]
   const geos: THREE.BufferGeometry[] = []
+  const washing: THREE.BufferGeometry[] = []
 
   const excluded = (x: number, z: number) => {
     if (Math.hypot(x - t.center[0], z - t.center[1]) > t.radius) return true
@@ -237,6 +343,7 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
     }
     const g = K.house(spec, r, 4)
     g.applyMatrix4(K.T(cx, base, cz, 0, yaw, 0))
+    houseFronts.push({ x: cx + Math.sin(yaw) * hd, z: cz + Math.cos(yaw) * hd, yaw, base, floors, w: hw * 2 })
     geos.push(g)
     placed.push({ x: cx, z: cz, rad: Math.max(hw, hd) })
     return true
@@ -343,11 +450,15 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
         g.applyMatrix4(K.T(px, y - 0.05, pz, 0, r() * 6, 0))
         geos.push(g)
       }
-      if (half < 2 && r() < 0.28 && Math.hypot(x - t.center[0], z - t.center[1]) < t.radius * 0.8) {
+      if (half < 2 && r() < 0.34 && Math.hypot(x - t.center[0], z - t.center[1]) < t.radius * 0.8) {
+        // some hang low enough over the lane that he has to duck
+        const low = r() < 0.5
         const len = half * 2 + 1.2
-        const g = K.washingLine(len, r)
-        g.applyMatrix4(K.T(x, y + 5.2 + r() * 1.5, z, 0, Math.atan2(-tz, tx) + Math.PI / 2, 0))
-        geos.push(g)
+        const ly = y + (low ? 1.9 : 5.2 + r() * 1.5)
+        const g = K.washingLine(len, r, low)
+        g.applyMatrix4(K.T(x, ly, z, 0, Math.atan2(-tz, tx) + Math.PI / 2, 0))
+        washing.push(g)
+        if (low) duckLines.push({ x0: x - tz * half, z0: z + tx * half, x1: x + tz * half, z1: z - tx * half, y: ly })
       }
     }
   }
@@ -359,6 +470,28 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
       const px = ax + Math.cos(ang) * (ar - 1.2)
       const pz = az + Math.sin(ang) * (ar - 1.2)
       sc.add('cypress' + Math.floor(r() * 2), { x: px, y: (a.y ?? w.ground(px, pz)) - 0.1, z: pz, ry: r() * 6, s: 0.9 })
+    }
+  }
+
+  // covered passages: a room on an arch over the narrowest lanes, now and then
+  for (const wp of w.walks) {
+    if (wp.chapter !== ci) continue
+    const line = wp.line
+    let last = -99
+    for (let s = 12; s < line.length - 12; s += 3) {
+      const half = line.e(1, s) * 0.5
+      if (half > 1.85 || s - last < 60 || r() > 0.12) continue
+      const x = line.x(s)
+      const z = line.z(s)
+      if (Math.hypot(x - t.center[0], z - t.center[1]) > t.radius * 0.85) continue
+      // both sides must be built
+      const [tx, tz] = line.tangent(s, 2)
+      const both = [-1, 1].every((side) => placed.some((p) => Math.hypot(p.x - (x - tz * side * (half + 3)), p.z - (z + tx * side * (half + 3))) < p.rad + 1))
+      if (!both) continue
+      last = s
+      const g = K.alleyArch(half * 2 + 1.6, walls[Math.floor(r() * walls.length)], roofs[Math.floor(r() * roofs.length)])
+      g.applyMatrix4(K.T(x, line.e(0, s) - 0.15, z, 0, Math.atan2(tx, tz), 0))
+      geos.push(g)
     }
   }
 
@@ -383,6 +516,16 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
     houses.add(m)
   }
   root.add(houses)
+  // the washing is its own mesh, so it can move
+  const wm = _merge(washing, false)
+  if (wm) {
+    wm.computeBoundingSphere()
+    const m = new THREE.Mesh(wm, worldMaterial({ vertexColors: true, hang: true }))
+    m.castShadow = true
+    m.receiveShadow = true
+    m.name = 'washing'
+    root.add(m)
+  }
 }
 
 import { mergeGeometries as _merge } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
@@ -462,6 +605,63 @@ function placeProp(w: World, p: Record<string, unknown>, root: THREE.Group, mat:
         parts.push(s)
       }
       g = _merge(parts, false)
+      break
+    }
+    case 'reeds':
+    case 'brush': {
+      const at = v3(p.at, w)
+      const rad = (p.r as number) ?? 3
+      g = K.reedBed(rad, (p.n as number) ?? Math.round(rad * rad * (kind === 'reeds' ? 9 : 4)), r, (x, z) => w.ground(x, z), at.x, at.z, kind)
+      g.translate(at.x, 0, at.z)
+      brushPatches.push({ x: at.x, z: at.z, r: rad, kind })
+      break
+    }
+    case 'kiln':
+    case 'bowl':
+    case 'slab':
+    case 'shrine':
+    case 'beehives':
+    case 'crates':
+    case 'nets':
+    case 'dryfountain':
+    case 'bench': {
+      const at = v3(p.at, w)
+      g =
+        kind === 'kiln' ? K.kiln(r)
+        : kind === 'bowl' ? K.dogBowl()
+        : kind === 'slab' ? K.slab(r)
+        : kind === 'shrine' ? K.shrine()
+        : kind === 'beehives' ? K.beehives((p.n as number) ?? 4, r)
+        : kind === 'crates' ? K.crates(r)
+        : kind === 'nets' ? K.nets()
+        : kind === 'dryfountain' ? K.dryFountain()
+        : K.bench((p.len as number) ?? 1.6)
+      const y = (p.at as number[]).length === 3 ? at.y : w.standY(at.x, at.z, -1) - 0.04
+      g.applyMatrix4(K.T(at.x, y, at.z, 0, rot, 0))
+      break
+    }
+    case 'rocks': {
+      // a field of boulders around `at`
+      const at = v3(p.at, w)
+      const rad = (p.r as number) ?? 4
+      const parts: THREE.BufferGeometry[] = []
+      for (let i = 0; i < ((p.n as number) ?? 7); i++) {
+        const a = r() * Math.PI * 2
+        const d = Math.sqrt(r()) * rad
+        const x = at.x + Math.cos(a) * d
+        const z = at.z + Math.sin(a) * d
+        const rk = K.rock(r, r() < 0.5 ? PAL.rockGrey : (p.col as string) ?? PAL.limeA)
+        const sc = 0.5 + r() * 1.6
+        rk.applyMatrix4(K.T(x, w.ground(x, z) - 0.1, z, 0, r() * 6, 0, sc, sc * (0.6 + r() * 0.5), sc))
+        parts.push(rk)
+      }
+      g = _merge(parts, false)
+      break
+    }
+    case 'ruin': {
+      const at = v3(p.at, w)
+      g = K.ruin((p.w as number) ?? 4, (p.d as number) ?? 3, r, (x, z) => w.ground(x, z), at.x, at.z, rot)
+      g.translate(at.x, 0, at.z)
       break
     }
     case 'fountain': {

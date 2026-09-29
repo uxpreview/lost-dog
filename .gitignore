@@ -14,3 +14,8 @@ dist
 renders/*
 !renders/iter-07/
 !renders/gate2b-06/
+# the probe's before/after sets, cited by docs/decisions.md D51 to D54
+!renders/probe/
+renders/probe/*
+!renders/probe/before/
+!renders/probe/after/

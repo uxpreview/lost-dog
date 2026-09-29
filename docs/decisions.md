@@ -697,3 +697,96 @@ to the plateau, and the town opens up at the rim.
 Gates and critic loops are retired as the unit of work. Each session plays the
 whole game (autopilot plus screenshots, see "Testing" in CLAUDE.md), picks the
 weakest moment, and fixes it. Performance is measured, never asserted.
+
+---
+
+# Making the walk worth walking (September 2026)
+
+Playtest after the rebuild: "the world is still very empty and walking is quite
+boring." `docs/next-session.md` diagnosed it and planned six parts; these are
+the rulings that came out of building them. Numbers are in
+`renders/probe/before/report.json` and `renders/probe/after/report.json`.
+
+## D48 — The dog has asides: business, invite, double-back
+
+Three new node types, all data. `business` (drink, dig, sniff off the path and
+back, roll, shake, a two-bound butterfly chase, nosing a cat) happens at a
+spot on the way and never waits for the boy. `invite` is a play-bow, and a bark
+if the boy is more than 16 m behind. `double-back` brings him a few meters back
+toward the boy to check, then on. **Rulings that keep him an actor:** he does
+his business where the boy can see it (at the spot he noses about until the
+boy is within 26 m); anything the boy is already past is skipped; if the boy
+walks by mid-aside he breaks off; and he keeps his lead, bounding when the boy
+is level or close, so the boy never has to walk back to a stop. In company
+(the shore) he leaves heel for an aside as the boy comes level, and returns.
+None of this is companion AI: every aside is an authored point on the route.
+
+## D49 — Traversal is texture, not verbs
+
+Nothing new is pressed. The ground decides: on the log or the plank his arms go
+out and he sways; in the river he high-steps and every step rings the water;
+on the ford's stepping stones he hops (the stones were raised clear of the
+water); in brush and reeds his arms come up and the plants part for him and
+the dog (a push term in the low-growth shader, `uPush`); on slopes over about
+0.3 he scrambles up with his hands or sits back going down; under low washing
+he ducks. Balance, wading, stones and scrambling slow him a little.
+
+## D50 — Life at the edges, none of it information
+
+`src/engine/life.ts`, driven by each chapter's `life` list: lizards that
+scatter, goats with bells on the canyon ledges, fish rings, dragonflies,
+butterflies, cats, a deer that bolts in the golden hour only, jays, gulls,
+crabs that run for the water, a night fisherman's lantern far out (cool
+`#D8E6F2`, never the window gold). Nothing points at the dog; nothing is red;
+nothing can be harmed. The town has 26 ambient people (`ambient` in ch2) with
+one idle each (sweeping, laundry, cards at a cafe table, asleep on a step, at a
+window, mending a boat, nets, talking, watering pots) who look up as he passes.
+Wind: brush, grass and washing move.
+
+## D51 — Density, and the budget that pays for it
+
+Ground cover (grass tufts; wildflowers yellow, violet and white only, added to
+`palette.ts`) in a band along every way outside the town, thicker near water.
+Figs near the canyon river, carobs on the plateau and hillside, boulder fields,
+a fallen shepherd's hut, a shrine, beehives, crates and nets on the quay, a dry
+fountain, benches, covered passages over the narrowest lanes, and house
+variants (flower boxes, awnings, outside stairs, balconies with pots).
+**Budget:** umbrella pines now have a far build (same draws, one canopy mass)
+swapped per chunk past 60 m, which took the worst spot (upper town looking
+into the woods) from 1.07M to 0.69M triangles. Ground cover is drawn only
+within 70 m; small critters within 55 m; ambient people within 48 m. Peak
+across the nine spots is now 0.73M. Draw calls are 121 to 337, roughly where
+they were before (123 to 333) and still over the old quality-bar figures.
+
+## D52 — Pace follows the story
+
+While the dog is ahead and out of sight (off screen, or behind the land, or
+behind houses in the town) for most of a second, the boy's walk eases up 12
+percent, and settles when the dog is back in view. Not player-chosen. Breath
+on climbs. The chapter walk speeds were **not** raised: that is still the
+human's call (see next-session.md).
+
+## D53 — Discovery fills the map; the town knows this dog, three times
+
+Each chapter now has two optional places that add a drawing to the end map:
+canyon, the shrine at the end of the gravel bar and a swimming rock down the
+shallows; town, the washing courtyard and the chapel (already there); woods,
+the lookout (now a framed vista of the town through the pines in the last sun)
+and the charcoal burner's clearing; shore, the jetty and a rock pool with
+crabs. "Town knows this dog" (the story recommends three, one missable, D46
+left it at one): the old woman at the upper square; a stallholder at the
+market where he now stops, who has something for him; and, missable, in the
+washing courtyard, his water bowl by a woman's door, and she shows the boy
+the way he went. No words anywhere.
+
+## D54 — The pacing metric
+
+`game.beats` logs every moment the player could notice (a dog stop or act, a
+reaction, a traversal moment, life noticing him) within 45 m of the boy; the
+same kind again within a few seconds is one moment, and a dog stop counts
+once. `game.beatReport()` gives the gaps. `tools/probe.mjs` runs autopilot
+through each chapter and reports them, takes the screenshots and counts
+triangles and calls at nine fixed spots. Before: medians 18, 12.5, 21 and 76 s
+with eight gaps over 25 s. After: medians 3.6, 2.9, 4.3 and 7.9 s, longest gap
+19 s, none over 25 s. Autopilot walks straight at full speed, so these are the
+floor of what a player sees, not a substitute for playing it.

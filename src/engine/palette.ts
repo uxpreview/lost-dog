@@ -84,6 +84,10 @@ export const PAL = {
   hullStripe: '#3E7E8C',
   hullOchre: '#D2A14A',
   windowGlow: '#F2B950',
+  // wildflowers: yellow, violet, white, and nothing else
+  flowerYellow: '#F2D27A',
+  flowerViolet: '#B7A4D0',
+  flowerWhite: '#F4F1E8',
 }
 
 // The only red in the game. Collar and route line, nothing else, ever.

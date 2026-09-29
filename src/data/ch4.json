@@ -71,6 +71,26 @@
       }
     },
     {
+      "type": "business",
+      "at": [-714, 56],
+      "act": "roll"
+    },
+    {
+      "type": "business",
+      "at": [-741, 79],
+      "act": "sniff"
+    },
+    {
+      "type": "business",
+      "at": [-792, 86],
+      "act": "shake"
+    },
+    {
+      "type": "business",
+      "at": [-838, 66],
+      "act": "dig"
+    },
+    {
       "type": "gate",
       "at": [-879.4, 16.4],
       "pose": "sit",
@@ -106,6 +126,48 @@
       "kind": "driftwood",
       "at": [-740, 2.1, 80],
       "rot": 0.3
+    },
+    {
+      "kind": "reeds",
+      "at": [-704, 42],
+      "r": 3.5
+    },
+    {
+      "kind": "nets",
+      "at": [-779, 84.5],
+      "rot": 0.3
+    },
+    {
+      "kind": "driftwood",
+      "at": [-803, 81],
+      "rot": 1.4
+    },
+    {
+      "kind": "driftwood",
+      "at": [-829, 72.5],
+      "rot": -0.6
+    },
+    {
+      "_name": "rocks at the tide line",
+      "kind": "rocks",
+      "at": [-748, 90],
+      "r": 4,
+      "n": 8,
+      "col": "#C6BAA2"
+    },
+    {
+      "kind": "rocks",
+      "at": [-842, 76],
+      "r": 5,
+      "n": 9,
+      "col": "#C6BAA2"
+    },
+    {
+      "kind": "rocks",
+      "at": [-722, 70],
+      "r": 3,
+      "n": 5,
+      "col": "#C6BAA2"
     }
   ],
   "exit": null,
@@ -127,6 +189,13 @@
       "at": [-880, 16],
       "r": 10,
       "glyph": "home"
+    },
+    {
+      "_name": "optional: the rock pool at the tide line",
+      "id": "rock-pool",
+      "at": [-842, 77],
+      "r": 8,
+      "glyph": "rockpool"
     }
   ],
   "lighting": [
@@ -161,6 +230,38 @@
       "fogFar": 620,
       "stars": 1,
       "moon": 1
+    }
+  ],
+  "life": [
+    {
+      "kind": "gulls",
+      "at": [-770, 110],
+      "r": 35,
+      "y": 16,
+      "n": 5
+    },
+    {
+      "kind": "crabs",
+      "at": [-765, 88],
+      "r": 6,
+      "n": 5
+    },
+    {
+      "kind": "crabs",
+      "at": [-805, 86],
+      "r": 6,
+      "n": 4
+    },
+    {
+      "_name": "a night fisherman, far out",
+      "kind": "lantern",
+      "at": [-790, 230]
+    },
+    {
+      "kind": "crabs",
+      "at": [-842, 78],
+      "r": 4,
+      "n": 4
     }
   ]
 }

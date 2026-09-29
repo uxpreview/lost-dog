@@ -670,6 +670,39 @@ function glyphParts(kind: string): Part[] {
         { d: ell(-2.6, -6, 0.6, 0.6) + ell(2.6, -6, 0.6, 0.6) + ell(-2.6, 2, 0.6, 0.6) + ell(2.6, 2, 0.6, 0.6) + ell(-2.6, 9.4, 0.6, 0.6) + ell(2.6, 9.4, 0.6, 0.6), f: INK },
       ]
     }
+    case 'shrine':
+      // a stone post with a little roof, flowers at its foot
+      return [
+        { d: 'M-2.4,7L-2.4,-3.6L2.4,-3.6L2.4,7Z', f: STONE },
+        { d: 'M-3.6,-3.4L0,-7.4L3.6,-3.4Z', f: ROOF },
+        { d: 'M-1.2,-2.2L-1.2,0.8L1.2,0.8L1.2,-2.2Z', f: INK },
+        { d: 'M-2.4,7L-2.4,-3.6L2.4,-3.6L2.4,7M-3.6,-3.4L0,-7.4L3.6,-3.4ZM-6,7L6,7', s: true, w: 0.6 },
+        { d: ell(4.4, 5.6, 0.9, 0.9) + ell(5.8, 4.6, 0.8, 0.8), f: MUSTARD },
+        { d: 'M4.4,6.5L4.4,7M5.8,5.4L5.8,7', s: true, w: 0.4 },
+      ]
+    case 'swimrock':
+      // a flat rock in the river, rings round it
+      return [
+        { d: 'M-10,4Q-7,2.6 -4,4T2,4T8,4M-8,-5Q-5.5,-6.2 -3,-5M4,-6Q6.5,-7.2 9,-6', s: true, w: 0.5, c: SEA_EDGE },
+        { d: 'M-7.5,1.6C-7,-1.8 -2,-3.2 3,-2.8C7,-2.4 8.4,-0.6 7.6,1.4C5.4,2.6 -5,3 -7.5,1.6Z', f: STONE },
+        { d: 'M-7.5,1.6C-7,-1.8 -2,-3.2 3,-2.8C7,-2.4 8.4,-0.6 7.6,1.4C5.4,2.6 -5,3 -7.5,1.6ZM-3,-0.6L2,-1', s: true, w: 0.6 },
+      ]
+    case 'kiln':
+      // a charcoal burner's mound and a stack of cut wood
+      return [
+        { d: 'M-9,5C-8,-2 -2,-5 1,-5C4,-5 8,-1 8.5,5Z', f: '#8A7D6A' },
+        { d: 'M-9,5C-8,-2 -2,-5 1,-5C4,-5 8,-1 8.5,5M-11,5L11,5M-1,-5.4Q0,-8 -1.4,-10M1.2,-5.2Q2.6,-7.8 1.6,-9.6', s: true, w: 0.55 },
+        { d: ell(6.6, 3.2, 1, 1) + ell(8.6, 3.2, 1, 1) + ell(7.6, 1.4, 1, 1), f: WOOD },
+        { d: ell(6.6, 3.2, 1, 1) + ell(8.6, 3.2, 1, 1) + ell(7.6, 1.4, 1, 1), s: true, w: 0.45 },
+      ]
+    case 'rockpool':
+      // rocks at the tide line holding a pool, and a crab
+      return [
+        { d: ell(0, 1, 6.5, 3.4), f: SHALLOW },
+        { d: ell(-7, 0, 2.6, 2.2) + ell(6.4, -1, 2.4, 2.4) + ell(-1.5, -3.6, 2.8, 1.8) + ell(2.5, 4.6, 2.6, 1.6), f: STONE },
+        { d: ell(-7, 0, 2.6, 2.2) + ell(6.4, -1, 2.4, 2.4) + ell(-1.5, -3.6, 2.8, 1.8) + ell(2.5, 4.6, 2.6, 1.6), s: true, w: 0.55 },
+        { d: 'M-2,1.4L-3,0.4M2,1.4L3,0.4M-1.6,2.2L-2.8,2.8M1.6,2.2L2.8,2.8' + ell(0, 1.6, 1.4, 0.9), s: true, w: 0.45 },
+      ]
     case 'home':
       return [
         { d: 'M-9,4.5L-5,4.5M5,4.5L9,4.5M-9,1.5L-5,1.5M5,1.5L9,1.5M-9,6.5L-9,0M9,6.5L9,0', s: true, w: 0.45 },
@@ -1453,7 +1486,7 @@ function buildPlan(
             const cz = dots[bi].z + nz * side * minD
             let md = Infinity
             for (let i = cd.from; i < cd.to; i++) md = Math.min(md, Math.hypot(dots[i].x - cx, dots[i].z - cz))
-            const seaPenalty = cz > coastZ(cx) - 4 && lm.glyph !== 'boat' && lm.glyph !== 'wave' && lm.glyph !== 'jetty' ? -20 : 0
+            const seaPenalty = cz > coastZ(cx) - 4 && lm.glyph !== 'boat' && lm.glyph !== 'wave' && lm.glyph !== 'jetty' && lm.glyph !== 'rockpool' ? -20 : 0
             if (md + seaPenalty > best) {
               best = md + seaPenalty
               bx = cx

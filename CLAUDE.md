@@ -70,9 +70,11 @@ every mesh, color and sound is generated at runtime from code and data.
 | A chapter: its route, the dog's stops, light by progress, townsfolk, framed shots | `src/data/ch1.json` .. `ch4.json` |
 | Every color in the world | `src/engine/palette.ts` |
 | How light and fog look | `src/engine/materials.ts` (shader), plus `lighting` in each chapter |
-| What the dog does at each node type | `src/engine/dog.ts` |
+| What the dog does at each node type, and his asides | `src/engine/dog.ts` |
+| Critters, small effects (dust, drops, water rings) | `src/engine/life.ts`, plus `life` in each chapter |
+| The town's ambient people and their idles | `ambient` in `ch2.json`; idles in `src/engine/characters.ts` |
 | Props (pines, houses, boats, the bell tower) | `src/engine/kit.ts` |
-| Where trees and houses get placed | `src/engine/dress.ts` |
+| Where trees, ground cover and houses get placed | `src/engine/dress.ts` |
 | Camera, whistle, chapter flow, the ending | `src/engine/game.ts` |
 | Title, cards, legend, touch controls, menu | `src/hud/Hud.tsx`, `src/hud/hud.css` |
 | The end-of-chapter map | `src/hud/MapScreen.tsx` |
@@ -93,6 +95,11 @@ Run `npm run dev`. `?ch=0..3` jumps to a chapter. In the browser console
 `__game.autopilot(seconds)` walks the boy along the dog's route in simulated
 time and returns a log of the dog's modes, which is how chapter flow is checked
 without playing it by hand. `__game.simulate(seconds)` advances time.
+`__game.beatReport()` gives the seconds between noticeable moments since the
+chapter began. `node tools/probe.mjs all <label>` (dev server running) runs
+autopilot through every chapter, reports those gaps, takes one screenshot per
+chapter at desktop and portrait into `renders/probe/<label>/`, and counts
+triangles and draw calls at nine fixed spots.
 `npm run red-audit` must pass before any push. `npm run build` must pass.
 
 ## Working rhythm

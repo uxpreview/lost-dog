@@ -39,6 +39,16 @@ function mesh(parent: THREE.Object3D, geo: THREE.BufferGeometry, mat: THREE.Mate
 
 export type BoyPose = 'none' | 'whistle' | 'reach' | 'kneel'
 
+/** How the ground is asking him to move, each 0..1; blended, never a verb. */
+export interface Traverse {
+  balance: number // on a log or a plank: arms out, a little sway
+  wade: number // in the river: high steps, arms lifted clear
+  climb: number // scrambling up: lean in, hands to the rock
+  descend: number // picking his way down: sit back, arms out
+  duck: number // under the washing
+  push: number // through brush and reeds: arms up in front
+}
+
 export class Boy {
   root = new THREE.Group()
   hips: THREE.Group
@@ -56,6 +66,8 @@ export class Boy {
   lookYaw = 0
   lookPitch = 0
   private breathe = Math.random() * 10
+  tr: Traverse = { balance: 0, wade: 0, climb: 0, descend: 0, duck: 0, push: 0 }
+  private trT = 0
 
   constructor() {
     const mat = worldMaterial({ vertexColors: true })
@@ -120,7 +132,9 @@ export class Boy {
   }
 
   /** speed in m/s; gait shapes the walk. Returns true on a footfall this frame. */
-  update(dt: number, speed: number, gait: 'light' | 'tired' | 'calm', lookYaw: number, lookPitch: number): boolean {
+  update(dt: number, speed: number, gait: 'light' | 'tired' | 'calm', lookYaw: number, lookPitch: number, ground?: Partial<Traverse>): boolean {
+    for (const k of Object.keys(this.tr) as (keyof Traverse)[]) this.tr[k] = damp(this.tr[k], ground?.[k] ?? 0, k === 'duck' ? 12 : 6, dt)
+    this.trT += dt
     const G = {
       light: { stride: 1.05, amp: 0.62, arm: 0.7, bob: 0.05, lean: 0.12, head: 0 },
       tired: { stride: 0.9, amp: 0.45, arm: 0.35, bob: 0.035, lean: 0.2, head: 0.18 },
@@ -162,12 +176,66 @@ export class Boy {
       aR = aR * (1 - this.poseW) + -0.9 * this.poseW
       aL = aL * (1 - this.poseW) + -0.7 * this.poseW
     }
-    this.armL.rotation.set(aL, 0, 0.08 + 0.05 * moving)
-    this.armR.rotation.set(aR, 0, aRz - 0.05 * moving)
+    // the ground's say in it
+    const tr = this.tr
+    let zL = 0.08 + 0.05 * moving
+    let zR = aRz - 0.05 * moving
+    let hipRoll = 0
+    let torsoRoll = 0
+    if (tr.balance > 0.01) {
+      const w = tr.balance
+      const sway = Math.sin(this.trT * 2.2) * 0.09 + Math.sin(this.trT * 3.7) * 0.04
+      zL += -1.25 * w + sway * 1.5 * w
+      zR += 1.25 * w + sway * 1.5 * w
+      aL *= 1 - w * 0.8
+      aR *= 1 - w * 0.8
+      hipRoll += sway * w
+      torsoRoll -= sway * 0.6 * w
+    }
+    if (tr.wade > 0.01) {
+      const w = tr.wade
+      this.legL.rotation.x += Math.max(0, s) * 0.45 * w * moving
+      this.legR.rotation.x += Math.max(0, -s) * 0.45 * w * moving
+      zL += -0.45 * w
+      zR += 0.45 * w
+      this.torso.rotation.x += 0.08 * w
+    }
+    if (tr.climb > 0.01) {
+      const w = tr.climb
+      this.torso.rotation.x += 0.42 * w
+      // hands to the rock, one then the other
+      aL = aL * (1 - w) + (-1.1 - Math.max(0, s) * 0.5) * w
+      aR = aR * (1 - w) + (-1.1 - Math.max(0, -s) * 0.5) * w
+      fR = fR * (1 - w) + -0.4 * w
+    }
+    if (tr.descend > 0.01) {
+      const w = tr.descend
+      this.torso.rotation.x -= 0.14 * w
+      zL += -0.55 * w
+      zR += 0.55 * w
+      this.hips.position.y -= 0.04 * w
+    }
+    if (tr.duck > 0.01) {
+      const w = tr.duck
+      this.hips.position.y -= 0.14 * w
+      this.torso.rotation.x += 0.55 * w
+    }
+    if (tr.push > 0.01) {
+      const w = tr.push
+      aL = aL * (1 - w) + (-1.0 + Math.sin(this.phase) * 0.25) * w
+      aR = aR * (1 - w) + (-1.0 - Math.sin(this.phase) * 0.25) * w
+      zL += 0.25 * w
+      zR += -0.25 * w
+      this.torso.rotation.x += 0.1 * w
+    }
+    this.hips.rotation.z = hipRoll
+    this.torso.rotation.z = torsoRoll
+    this.armL.rotation.set(aL, 0, zL)
+    this.armR.rotation.set(aR, 0, zR)
     this.foreR.rotation.x = fR
     this.lookYaw = damp(this.lookYaw, lookYaw, 5, dt)
     this.lookPitch = damp(this.lookPitch, lookPitch, 5, dt)
-    this.head.rotation.set(G.head * moving - this.lookPitch - (this.pose === 'whistle' ? 0.2 * this.poseW : 0), this.lookYaw, 0)
+    this.head.rotation.set(G.head * moving - this.lookPitch - (this.pose === 'whistle' ? 0.2 * this.poseW : 0) + this.tr.duck * 0.35 + this.tr.balance * 0.25, this.lookYaw, 0)
     return step
   }
 }
@@ -175,7 +243,10 @@ export class Boy {
 // ============================================================================ dog
 
 export type DogGait = 'stand' | 'trot' | 'bound' | 'sit' | 'walk'
-export type DogAct = 'none' | 'glance' | 'turn' | 'bow' | 'bounce' | 'stare' | 'eat' | 'lookup' | 'answer'
+export type DogAct =
+  | 'none' | 'glance' | 'turn' | 'bow' | 'bounce' | 'stare' | 'eat' | 'lookup' | 'answer'
+  // business on the walk
+  | 'drink' | 'dig' | 'sniff' | 'roll' | 'shake' | 'leap' | 'nose'
 
 export class DogRig {
   root = new THREE.Group()
@@ -315,6 +386,9 @@ export class DogRig {
     this.actT += dt
     const a = this.act
     const k = a === 'none' ? 0 : Math.sin(clamp(this.actT / this.actDur, 0, 1) * Math.PI)
+    // sustained acts ease in and out and hold in between
+    const kh = a === 'none' ? 0 : clamp(this.actT / 0.35, 0, 1) * clamp((this.actDur - this.actT) / 0.35, 0, 1)
+    const at = this.actT
     if (a !== 'none' && this.actT > this.actDur) this.act = 'none'
 
     // tail language
@@ -328,6 +402,21 @@ export class DogRig {
     if (a === 'bow' || a === 'bounce' || a === 'answer') {
       wantSpeed = 16
       wantAmp = 0.8
+    }
+    if (a === 'dig' || a === 'leap' || a === 'roll') {
+      wantUp = 0.9
+      wantSpeed = 15
+      wantAmp = 0.75
+    }
+    if (a === 'sniff' || a === 'drink') {
+      wantUp = 0.55
+      wantSpeed = 7
+      wantAmp = 0.3
+    }
+    if (a === 'nose') {
+      wantUp = 0.75
+      wantSpeed = 11
+      wantAmp = 0.35
     }
     if (bounding) wantUp = 0.5
     this.tailUp = damp(this.tailUp, wantUp, 5, dt)
@@ -343,10 +432,31 @@ export class DogRig {
       pitch += 0.35 * k
       y -= 0.1 * k
     }
+    let roll = 0
     if (a === 'bounce') {
       this.hop = Math.max(0, Math.sin(clamp(this.actT / this.actDur, 0, 1) * Math.PI * 2)) * 0.22
       pitch -= 0.3 * k
+    } else if (a === 'leap') {
+      // two bounds after something, then it is gone
+      const t = at / 0.62
+      this.hop = t < 2 ? Math.abs(Math.sin(t * Math.PI)) * 0.42 : damp(this.hop, 0, 10, dt)
+      pitch += t < 2 ? -Math.cos(t * Math.PI) * 0.35 : 0
     } else this.hop = damp(this.hop, 0, 10, dt)
+    if (a === 'dig') {
+      pitch += 0.22 * kh
+      y -= 0.04 * kh
+    }
+    if (a === 'drink') {
+      pitch += 0.2 * kh
+      y -= 0.05 * kh
+    }
+    if (a === 'sniff') pitch += 0.08 * kh
+    if (a === 'roll') {
+      // over onto his back in the grass, wriggling
+      roll = kh * (2.2 + Math.sin(at * 7) * 0.35)
+      y -= 0.22 * kh
+    }
+    if (a === 'shake') roll = Math.sin(at * 36) * 0.32 * kh
     y += this.hop
     this.body.position.y = y
     this.body.position.z = -this.sitW * 0.06
@@ -354,7 +464,7 @@ export class DogRig {
     const twistWant = a === 'turn' ? clamp(this.targetLookYaw, -0.9, 0.9) * 0.5 * k : 0
     this.bodyTwist = damp(this.bodyTwist, twistWant, 8, dt)
     this.body.rotation.y = this.bodyTwist
-    this.body.rotation.z = moving * 0.03 * s
+    this.body.rotation.z = moving * 0.03 * s + roll
 
     // legs
     for (const L of this.legs) {
@@ -381,6 +491,21 @@ export class DogRig {
           knee += 1.2 * k
         }
         if (a === 'bounce') hip -= 0.8 * k
+        if (a === 'dig') {
+          // the front paws scrabble, one then the other
+          const ph = at * 17 + (L.side > 0 ? Math.PI : 0)
+          hip = hip * (1 - kh) + (-0.7 + Math.sin(ph) * 0.65) * kh
+          knee = knee * (1 - kh) + (0.9 + Math.cos(ph) * 0.5) * kh
+        }
+      }
+      if (a === 'roll') {
+        const ph = at * 9 + (L.front ? 0 : 1.3) + (L.side > 0 ? Math.PI : 0)
+        hip = hip * (1 - kh) + (L.front ? -0.6 : 0.6) * kh + Math.sin(ph) * 0.5 * kh
+        knee = knee * (1 - kh) + (L.front ? 0.9 : -0.8) * kh
+      }
+      if (a === 'leap') {
+        const t = at / 0.62
+        if (t < 2) hip = (L.front ? -1 : 1) * Math.sin(t * Math.PI * 2) * 0.7
       }
       L.hip.rotation.x = hip
       L.knee.rotation.x = knee
@@ -398,16 +523,33 @@ export class DogRig {
       lp = 0.55
     }
     if (a === 'eat') lp = -0.7 * k
+    if (a === 'drink') lp = lp * (1 - kh) + (-0.95 + Math.max(0, Math.sin(at * 11)) * 0.12) * kh
+    if (a === 'dig') lp = lp * (1 - kh) - 0.55 * kh
+    if (a === 'sniff') {
+      lp = lp * (1 - kh) - 0.75 * kh
+      ly = ly * (1 - kh) + Math.sin(at * 2.6) * 0.45 * kh
+    }
+    if (a === 'nose') {
+      // nose out, slowly; the cat's paw at the end and he pulls back
+      const back = smoothstepN(0.72, 0.8, at / this.actDur)
+      lp = lp * (1 - kh) + (-0.3 + back * 0.55) * kh
+    }
+    if (a === 'leap') lp = 0.5 * kh
+    if (a === 'roll') lp = 0.2 * kh
     if (a === 'stare') lp = 0.12
     const lookW = lookYaw !== null || a === 'glance' || a === 'turn' || a === 'lookup' ? 1 : 0
     this.lookYaw = damp(this.lookYaw, clamp(ly, -1.9, 1.9) * lookW, a === 'stare' ? 20 : 7, dt)
     this.lookPitch = damp(this.lookPitch, lp, 7, dt)
     const headBob = moving * 0.04 * Math.sin(this.phase * 2)
-    this.neck.rotation.set(-this.sitW * 0.1 + this.sitW * 0.45 - this.lookPitch * 0.4 + headBob, this.lookYaw * 0.5 - this.bodyTwist * 0.5, 0)
+    // business: the whole neck goes down to the water, the hole, the scent
+    const neckDown = a === 'drink' ? 0.95 * kh : a === 'dig' ? 0.55 * kh : a === 'sniff' ? 0.5 * kh : a === 'nose' ? 0.35 * kh : 0
+    this.neck.rotation.set(-this.sitW * 0.1 + this.sitW * 0.45 - this.lookPitch * 0.4 + headBob + neckDown, this.lookYaw * 0.5 - this.bodyTwist * 0.5, 0)
     this.head.rotation.set(this.sitW * -0.35 - this.lookPitch * 0.6 - this.boundW * 0.2, this.lookYaw * 0.5, 0)
 
     // ears: up when alert, back when running
-    const earWant = a === 'stare' ? 1 : bounding ? -0.6 : excite > 0.5 ? 0.9 : 0.5
+    let earWant = a === 'stare' ? 1 : bounding ? -0.6 : excite > 0.5 ? 0.9 : 0.5
+    if (a === 'nose' || a === 'leap') earWant = 1
+    if (a === 'shake') earWant = Math.sin(at * 36) > 0 ? 1 : -0.8
     this.earsUp = damp(this.earsUp, earWant, 8, dt)
     const flick = Math.max(0, Math.sin(this.wag * 0.13) - 0.97) * 8
     this.earL.rotation.set(-this.earsUp * 0.2 + (1 - this.earsUp) * 0.5, 0, -0.25 - flick * 0.3)
@@ -433,6 +575,11 @@ export class DogRig {
     }
     return step
   }
+}
+
+function smoothstepN(a: number, b: number, x: number) {
+  const t = clamp((x - a) / (b - a), 0, 1)
+  return t * t * (3 - 2 * t)
 }
 
 /** Set each frame by the game so the eye sprites face the camera. */
@@ -520,6 +667,77 @@ export class Folk {
     this.body.rotation.x = bend * 0.55
     this.head.rotation.y = damp(this.head.rotation.y, lookYaw - point * pointYaw * 0.3, 4, dt)
     this.head.rotation.x = bend * 0.3
+  }
+}
+
+export type FolkIdle = 'sweep' | 'laundry' | 'cards' | 'sleep' | 'window' | 'mend' | 'chat' | 'water' | 'stand' | 'sit' | 'nets'
+
+/**
+ * One idle each, for the town's ambient people. Called after update(), it
+ * overrides the limbs it owns. `t` is the person's own clock.
+ */
+export function folkIdle(f: Folk, idle: FolkIdle, t: number, looking: number) {
+  const B = f.body
+  switch (idle) {
+    case 'sweep': {
+      const sw = Math.sin(t * 2.2)
+      B.rotation.y = sw * 0.35
+      B.rotation.x = 0.25
+      f.armL.rotation.set(-0.9, 0, 0.35 + sw * 0.15)
+      f.armR.rotation.set(-0.6, 0, -0.1 + sw * 0.15)
+      break
+    }
+    case 'laundry': {
+      // reach up to the line, peg, down to the basket, up again
+      const c = (t % 5.5) / 5.5
+      const up = c < 0.6 ? Math.sin((c / 0.6) * Math.PI) : 0
+      f.armL.rotation.set(-2.7 * up - 0.1, 0, 0.1)
+      f.armR.rotation.set(-2.6 * up - 0.1 + (1 - up) * -0.4, 0, -0.1)
+      B.rotation.x = (1 - up) * 0.35 * (c > 0.65 ? 1 : 0)
+      break
+    }
+    case 'cards':
+    case 'nets': {
+      const play = idle === 'cards' ? Math.max(0, Math.sin(t * 0.9) - 0.85) * 6 : 0
+      f.armL.rotation.set(-1.15, 0, 0.25)
+      f.armR.rotation.set(-1.15 - play * 0.6 + (idle === 'nets' ? Math.sin(t * 5) * 0.15 : 0), 0, -0.25)
+      B.rotation.x = 0.15
+      if (!looking) f.head.rotation.x = 0.35
+      break
+    }
+    case 'sleep':
+      B.rotation.x = 0.1 + Math.sin(t * 0.8) * 0.02
+      f.head.rotation.set(0.6, 0.25, 0.15)
+      f.armL.rotation.set(-0.3, 0, 0.3)
+      f.armR.rotation.set(-0.3, 0, -0.3)
+      break
+    case 'window':
+      f.armL.rotation.set(-1.4, 0, 0.5)
+      f.armR.rotation.set(-1.4, 0, -0.5)
+      B.rotation.x = 0.2
+      if (!looking) f.head.rotation.x = 0.3
+      break
+    case 'mend': {
+      B.rotation.x = 0.7
+      f.armL.rotation.set(-1.2, 0, 0.3)
+      const hit = Math.max(0, Math.sin(t * 5.5))
+      f.armR.rotation.set(-1.8 + hit * 0.9, 0, -0.2)
+      break
+    }
+    case 'chat': {
+      const g = Math.max(0, Math.sin(t * 0.8 + f.phase)) * Math.max(0, Math.sin(t * 2.3))
+      f.armR.rotation.set(-0.5 - g * 0.7, 0, -0.3 - g * 0.3)
+      if (!looking) f.head.rotation.x = Math.sin(t * 1.4 + f.phase) * 0.08
+      break
+    }
+    case 'water':
+      B.rotation.x = 0.25
+      f.armR.rotation.set(-0.9 + Math.sin(t * 0.7) * 0.15, 0, -0.1)
+      break
+    case 'stand':
+    case 'sit':
+      B.rotation.z = Math.sin(t * 0.3 + f.phase) * 0.03
+      break
   }
 }
 

@@ -2265,6 +2265,73 @@ export const audio = {
     bin(end, pn, send, room, s1, l1, g1, s2, b2, l2, g2)
   },
 
+  /**
+   * Small sounds of life, spatial: a goat's bell, brush pushed through, a fish
+   * or a drink, the dog digging or shaking off, something small scattering.
+   */
+  cue(kind: 'goatbell' | 'rustle' | 'plop' | 'splash' | 'scatter' | 'dig' | 'shake' | 'lap' | 'hooves', x: number, y: number, z: number, level = 1): void {
+    if (!isLive()) return
+    const d = Math.hypot(x - ear.x, y - ear.y, z - ear.z)
+    if (d > 70) return
+    const t = A.currentTime + 0.01
+    const sp = spatial(x, y, z, false, 0.02)
+    const o = sp.input
+    const L = level
+    let end = t
+    switch (kind) {
+      case 'goatbell': {
+        // a small tin bell, knocked twice by a nodding head
+        const f = rand(1480, 1720)
+        const parts: [number, number, number][] = [[1, 1, 0.18], [2.32, 0.5, 0.09], [3.9, 0.3, 0.05], [5.1, 0.18, 0.03]]
+        end = bell(o, t, f, 0.05 * L, parts, 6000)
+        end = Math.max(end, bell(o, t + rand(0.16, 0.24), f * rand(0.99, 1.01), 0.035 * L, parts, 6000))
+        break
+      }
+      case 'rustle':
+        end = grains(o, t, 26, 0.45, 1800, 5200, 1.2, 0.06 * L, 0.012)
+        end = Math.max(end, burst(o, t, G.pink, 'bandpass', 2600, 0.8, 0.4, 0.05 * L, 0.05))
+        break
+      case 'plop':
+        end = thud(o, t, rand(520, 700), 0.09, 0.05 * L)
+        end = Math.max(end, grains(o, t + 0.02, 6, 0.12, 2500, 5000, 3, 0.02 * L, 0.008))
+        break
+      case 'lap':
+        for (let i = 0; i < 7; i++) end = Math.max(end, thud(o, t + i * rand(0.2, 0.26), rand(700, 900), 0.05, 0.03 * L))
+        break
+      case 'splash':
+        end = burst(o, t, G.white, 'bandpass', 1500, 0.9, 0.22, 0.07 * L, 0.004, 700)
+        end = Math.max(end, grains(o, t + 0.03, 10, 0.2, 2200, 5200, 2, 0.03 * L, 0.01))
+        break
+      case 'scatter':
+        end = grains(o, t, 14, 0.25, 3000, 7000, 1.5, 0.04 * L, 0.006)
+        break
+      case 'dig':
+        end = grains(o, t, 40, 2.6, 900, 2600, 1.1, 0.07 * L, 0.02)
+        break
+      case 'shake':
+        end = burst(o, t, G.pink, 'bandpass', 1100, 0.7, 0.9, 0.06 * L, 0.08)
+        end = Math.max(end, grains(o, t + 0.1, 24, 0.9, 2500, 6000, 2, 0.03 * L, 0.008))
+        break
+      case 'hooves':
+        for (let i = 0; i < 8; i++) end = Math.max(end, thud(o, t + i * 0.19 + rand(0, 0.04), rand(90, 130), 0.08, 0.05 * L))
+        end = Math.max(end, grains(o, t, 30, 1.6, 900, 2400, 1, 0.04 * L, 0.02))
+        break
+    }
+    bin(end + 0.1, ...sp.nodes)
+  },
+
+  /** The boy's breath on a climb: one soft in-and-out, non-spatial. */
+  breath(intensity = 0.6): void {
+    if (!isLive()) return
+    const t = A.currentTime + 0.01
+    const pn = stereo(0)
+    pn.connect(G.sfx)
+    const L = 0.035 * clamp(intensity, 0, 1)
+    let end = burst(pn, t, G.pink, 'bandpass', 900, 0.8, 0.5, L * 0.7, 0.18, 1300)
+    end = Math.max(end, burst(pn, t + 0.55, G.pink, 'bandpass', 700, 0.8, 0.7, L, 0.06, 500))
+    bin(end + 0.1, pn)
+  },
+
   /** A wooden gate latch/creak, spatial. */
   gate(x: number, y: number, z: number): void {
     if (!isLive()) return
