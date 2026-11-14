@@ -329,7 +329,7 @@
       "hazeDist": 150,
       "rays": 0.4,
       "bloom": 0.5,
-      "exposure": 1.12
+      "exposure": 1.06
     },
     {
       "at": 1,
@@ -354,7 +354,7 @@
       "hazeDist": 220,
       "rays": 0.25,
       "bloom": 0.5,
-      "exposure": 1.12
+      "exposure": 1.06
     }
   ],
   "life": [

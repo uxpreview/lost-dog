@@ -480,7 +480,7 @@
       "at": 0,
       "sun": [170, 64],
       "sunColor": "#FFF4DE",
-      "sunI": 1.02,
+      "sunI": 0.92,
       "skyTop": "#3E90C8",
       "skyHorizon": "#D2E8EE",
       "ambSky": "#7FA4CC",
@@ -499,13 +499,13 @@
       "hazeDist": 200,
       "rays": 0.12,
       "bloom": 0.55,
-      "exposure": 1.1
+      "exposure": 1.0
     },
     {
       "at": 1,
       "sun": [215, 46],
       "sunColor": "#FFEACA",
-      "sunI": 1.0,
+      "sunI": 0.92,
       "skyTop": "#4A96C8",
       "skyHorizon": "#E4EAD8",
       "ambSky": "#86A6C8",
@@ -524,7 +524,7 @@
       "hazeDist": 200,
       "rays": 0.2,
       "bloom": 0.55,
-      "exposure": 1.1
+      "exposure": 1.0
     }
   ],
   "life": [

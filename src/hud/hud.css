@@ -84,8 +84,8 @@ body.no-cursor * {
   align-items: center;
 }
 .loading-dots i {
-  width: 7px;
-  height: 7px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   opacity: 0.16;
   /* transform and opacity only: this keeps moving while the world is built */
@@ -333,6 +333,17 @@ body.no-cursor * {
   text-shadow: 0 2px 40px rgba(60, 42, 20, 0.5), 0 0 2px rgba(60, 42, 20, 0.25);
   opacity: 0;
   transition: opacity 1.4s var(--ease);
+}
+.card::before {
+  /* a breath of shade behind the name, so it holds on pale stone as well as on sky */
+  content: '';
+  position: absolute;
+  inset: -40% 10%;
+  background: radial-gradient(closest-side, rgba(46, 32, 16, 0.3), rgba(46, 32, 16, 0));
+  z-index: -1;
+}
+.card.dark::before {
+  background: radial-gradient(closest-side, rgba(8, 12, 30, 0.34), rgba(8, 12, 30, 0));
 }
 .card.on {
   opacity: 1;

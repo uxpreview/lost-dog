@@ -13,7 +13,7 @@ import { World } from './world'
 import { Polyline } from './path'
 import { U } from './materials'
 import { buildTerrain, buildPaths, buildSea, buildRivers, buildSky, bindHeightMap } from './terrain'
-import { dress, duckLines, brushPatches, houseFronts } from './dress'
+import { dress, duckLines, brushPatches, houseFronts, archSpots } from './dress'
 import { Boy, Folk, camQuat, folkIdle, type FolkIdle } from './characters'
 import { DogActor, type DogCtx } from './dog'
 import { Birds, Prints, Rings, Motes, Fireflies } from './fx'
@@ -123,6 +123,12 @@ export class Game {
   camFov = 50
   frameW = 0
   camSwing = 0
+  private restT = 0
+  private rest = 0
+  /** seconds since the title let go: the first move into the day is a slow one */
+  private sinceBegin = 99
+  /** the town camera's arm: how far back it can sit and still be in the street */
+  boom = 7
   cutCam: { pos: THREE.Vector3; look: THREE.Vector3; fov: number } | null = null
   // whistle
   whistleCool = 0
@@ -533,6 +539,8 @@ export class Game {
         this.px = 68
         this.pz = 34
         this.pyaw = Math.atan2(-18, 6)
+        // he faces the water; the camera faces up the canyon, where the day will go
+        this.camYaw = Math.atan2(tx, tz)
       }
       this.snapCamera = true
     }
@@ -591,6 +599,7 @@ export class Game {
     audio.unlock()
     audio.setBed(this.ch.bed, 3)
     this.mode = 'play'
+    this.sinceBegin = 0
     this.showCard()
     const ui = useUI.getState()
     ui.set({ screen: 'play', legend: this.ci === 0 })
@@ -1437,8 +1446,10 @@ export class Game {
     } else {
       // follow along the route: the camera looks where the dog went
       const nearest = this.world.corridor(this.px, this.pz, this.walk)
-      let tx = Math.sin(this.pyaw)
-      let tz = Math.cos(this.pyaw)
+      // off any path: follow the way he walks, and hold the view when he stops
+      const freeYaw = this.pspeed > 0.5 ? this.pyaw : this.camYaw
+      let tx = Math.sin(freeYaw)
+      let tz = Math.cos(freeYaw)
       if (nearest) {
         const [ax, az] = nearest.w.line.tangent(nearest.s, 9)
         // on a branch, face whichever way along it he is heading
@@ -1446,14 +1457,36 @@ export class Game {
         tx = ax * sign
         tz = az * sign
       }
+      // The camera looks where the dog looks, then where the dog went. When he
+      // goes rigid it turns to what he is staring at (nothing); in open ground
+      // with no path to follow, it turns to him.
+      const dn = this.dog.node?.node
+      let turn = 1.6
+      if (this.dog.mode === 'stare' && dn?.type === 'bolt') {
+        const l = Math.hypot(dn.stare[0] - this.px, dn.stare[2] - this.pz) || 1
+        tx = (dn.stare[0] - this.px) / l
+        tz = (dn.stare[2] - this.pz) / l
+        turn = 1.1
+      } else if (!nearest && this.dog.mode !== 'heel' && this.dog.mode !== 'companion' && this.dog.mode !== 'home') {
+        const l = Math.hypot(this.dog.x - this.px, this.dog.z - this.pz)
+        if (l > 5) {
+          tx = (this.dog.x - this.px) / l
+          tz = (this.dog.z - this.pz) / l
+        }
+      }
       const pathYaw = Math.atan2(tx, tz)
       const moveYaw = this.pspeed > 0.5 ? Math.atan2(this.pvx, this.pvz) : pathYaw
       const want = pathYaw + clamp(angleDiff(pathYaw, moveYaw), -0.5, 0.5) * 0.4
-      this.camYaw = dampAngle(this.camYaw, want, this.snapCamera ? 100 : 1.6, dt)
+      this.camYaw = dampAngle(this.camYaw, want, this.snapCamera ? 100 : turn, dt)
       const town = this.ch.bed === 'town'
-      const dist = town ? 6.9 : 6.9
-      const height = town ? 5.0 : 3.0
-      const lead = town ? 3.4 : 5
+      // stand still a while and the frame opens: the place gets its own look
+      const still = this.mode === 'play' && this.pspeed < 0.15 && !useUI.getState().paused
+      this.restT = still ? this.restT + dt : 0
+      this.rest = damp(this.rest, smoothstep(2.5, 8, this.restT), still ? 0.7 : 2.2, dt)
+      const dist = 6.9 + this.rest * (town ? 1.6 : 3.4)
+      const height = (town ? 5.0 : 3.0) + this.rest * (town ? 0.6 : 0.5)
+      const lead = (town ? 3.4 : 5) + this.rest * 3
+      wantFov -= this.rest * 3
       const fx = Math.sin(this.camYaw)
       const fz = Math.cos(this.camYaw)
       wantPos = new THREE.Vector3(this.px - fx * dist, this.py + height, this.pz - fz * dist)
@@ -1476,26 +1509,63 @@ export class Game {
         }
         return b
       }
-      let bestYaw = this.camYaw
-      let best = blockedAt(this.camYaw)
-      if (best > 0.3) {
-        for (const k of [1, -1, 2, -2, 3, -3]) {
-          const yaw = this.camYaw + k * 0.38
-          const b = blockedAt(yaw) + Math.abs(k) * 0.4
-          if (b < best) {
-            best = b
-            bestYaw = yaw
+      if (town) {
+        // In the lanes the camera is on a boom that stays in the street: it
+        // shortens round a corner rather than climbing a house, and drops to
+        // pass under a covered passage rather than over it.
+        const reach = (yaw: number) => {
+          let d = 0
+          for (let q = 0.6; q <= dist + 0.01; q += 0.6) {
+            if (this.world.walkClearance(this.px - Math.sin(yaw) * q, this.pz - Math.cos(yaw) * q, 3) > 0.5) break
+            d = q
+          }
+          return d
+        }
+        let bestYaw = this.camYaw
+        let best = reach(this.camYaw)
+        if (best < dist - 0.5) {
+          for (const k of [1, -1, 2, -2, 3, -3]) {
+            const yaw = this.camYaw + k * 0.3
+            const rr = reach(yaw) - Math.abs(k) * 0.45
+            if (rr > best + 0.3) {
+              best = rr
+              bestYaw = yaw
+            }
           }
         }
+        this.camSwing = dampAngle(this.camSwing, angleDiff(this.camYaw, bestYaw), 1.5, dt)
+        const sw = this.camYaw + this.camSwing
+        let under = 0
+        for (const a of archSpots) under = Math.max(under, smoothstep(9.5, 5.5, Math.hypot(a.x - this.px, a.z - this.pz)))
+        const wantBoom = clamp(Math.min(reach(sw), lerp(dist, 4.6, under)), 2.4, dist)
+        // in quickly, out slowly: a wall arriving is sudden, a street opening is not
+        this.boom = this.snapCamera ? wantBoom : damp(this.boom, wantBoom, wantBoom < this.boom ? 6 : 1.6, dt)
+        const h = lerp(lerp(2.5, height, smoothstep(2.4, dist, this.boom)), 1.95, under)
+        wantPos = new THREE.Vector3(this.px - Math.sin(sw) * this.boom, this.py + h, this.pz - Math.cos(sw) * this.boom)
+        wantLook = new THREE.Vector3(this.px + Math.sin(sw) * lead, this.py + lerp(1.25, 1.5, under), this.pz + Math.cos(sw) * lead)
+        this.frameW = damp(this.frameW, 0, 3, dt)
+      } else {
+        let bestYaw = this.camYaw
+        let best = blockedAt(this.camYaw)
+        if (best > 0.3) {
+          for (const k of [1, -1, 2, -2, 3, -3]) {
+            const yaw = this.camYaw + k * 0.38
+            const b = blockedAt(yaw) + Math.abs(k) * 0.4
+            if (b < best) {
+              best = b
+              bestYaw = yaw
+            }
+          }
+        }
+        this.camSwing = dampAngle(this.camSwing, angleDiff(this.camYaw, bestYaw), 1.5, dt)
+        const sw = this.camYaw + this.camSwing
+        wantPos = new THREE.Vector3(this.px - Math.sin(sw) * dist, this.py + height, this.pz - Math.cos(sw) * dist)
+        wantLook = new THREE.Vector3(this.px + Math.sin(sw) * lead, this.py + 1.25, this.pz + Math.cos(sw) * lead)
+        const g = this.world.ground(wantPos.x, wantPos.z)
+        if (wantPos.y < g + 1.8) wantPos.y = g + 1.8
+        this.frameW = damp(this.frameW, blockedAt(sw), 3, dt)
+        wantPos.y += this.frameW
       }
-      this.camSwing = dampAngle(this.camSwing, angleDiff(this.camYaw, bestYaw), 1.5, dt)
-      const sw = this.camYaw + this.camSwing
-      wantPos = new THREE.Vector3(this.px - Math.sin(sw) * dist, this.py + height, this.pz - Math.cos(sw) * dist)
-      wantLook = new THREE.Vector3(this.px + Math.sin(sw) * lead, this.py + 1.25, this.pz + Math.cos(sw) * lead)
-      const g = this.world.ground(wantPos.x, wantPos.z)
-      if (wantPos.y < g + 1.8) wantPos.y = g + 1.8
-      this.frameW = damp(this.frameW, blockedAt(sw), 3, dt)
-      wantPos.y += this.frameW
       // the dog in frame pulls the composition toward him
       const toDog = new THREE.Vector3(this.dog.x - this.px, 0, this.dog.z - this.pz)
       const dd = toDog.length()
@@ -1531,7 +1601,8 @@ export class Game {
       this.camFov = wantFov
       this.snapCamera = false
     } else {
-      const rate = this.mode === 'title' ? 1 : this.cutCam ? 2.2 : 4
+      this.sinceBegin += dt
+      const rate = this.mode === 'title' ? 1 : this.cutCam ? 2.2 : lerp(0.9, 4, smoothstep(0.5, 4, this.sinceBegin))
       this.camPos.set(damp(this.camPos.x, wantPos.x, rate, dt), damp(this.camPos.y, wantPos.y, rate, dt), damp(this.camPos.z, wantPos.z, rate, dt))
       this.camLook.set(damp(this.camLook.x, wantLook.x, rate * 1.4, dt), damp(this.camLook.y, wantLook.y, rate * 1.4, dt), damp(this.camLook.z, wantLook.z, rate * 1.4, dt))
       this.camFov = damp(this.camFov, wantFov, 2, dt)

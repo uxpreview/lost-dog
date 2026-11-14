@@ -520,7 +520,7 @@ void main() {
   // the light gathers round the sun: a wide warm breath, then a tight halo
   float wide = pow(max(cs, 0.0), 6.0);
   float tight = pow(max(cs, 0.0), 90.0);
-  col += uSunGlow * (wide * 0.28 + tight * 0.55) * (1.0 - uMoon * 0.55) * up;
+  col += uSunGlow * (wide * 0.15 + tight * 0.5) * (1.0 - uMoon * 0.55) * up;
 
   // stars: a fixed field in direction space, a few of them large, all breathing
   if (uStars > 0.0 && t > 0.0) {

@@ -790,3 +790,136 @@ triangles and calls at nine fixed spots. Before: medians 18, 12.5, 21 and 76 s
 with eight gaps over 25 s. After: medians 3.6, 2.9, 4.3 and 7.9 s, longest gap
 19 s, none over 25 s. Autopilot walks straight at full speed, so these are the
 floor of what a player sees, not a substitute for playing it.
+
+---
+
+# The picture, the frame and the door (November 2026)
+
+The human's brief: make it award-winning, change anything. Played first (stills
+of the whole day, title through ending), the build was complete but flat: an
+empty sky, daylight so overexposed that every pale surface sat on the tone
+curve's shoulder, a night shore of grey planes, a title screen with no title,
+and an ending shot from so far away that the door could not be seen opening.
+It could not be seen at all: the house was buried three meters in the hill.
+These rulings answer that. The story, the four rules of the dog, no wayfinding
+UI and no world text are untouched. Numbers are in
+`renders/probe/look/report.json`.
+
+## D55 — A post stack: bloom, light shafts, grade (extends D38, D39)
+
+`post.ts` is now four small passes instead of one. The scene target's alpha is
+a "solid" mask (the sky writes 0). **Bloom:** a soft-knee bright pass at half
+resolution, down five halvings and back up (four on phones), so only the sun
+on water, the moon, pale stone at noon and the windows of home glow.
+**Shafts:** the sky near the sun is marched toward the sun's place on screen at
+quarter resolution and blocked by anything solid: light through the pines at
+golden hour, the moon through them at the blue hour. **Grade:** exposure, a
+soft shoulder, a little luminance contrast, split tone, saturation, vignette,
+grain. Staged moments are letterboxed in the same pass (`uBars`). Bloom,
+shafts and exposure are per light key (`bloom`, `rays`, `exposure`), so they
+are data.
+
+## D56 — The sky is a place: clouds, a sun, a moon, stars (extends D39)
+
+One small tiling noise texture, generated at load, never loaded
+(`makeNoiseTexture`). The sky shader draws flat-bottomed two-tone clouds on a
+plane overhead, lit from the sun's side, with thin streaks near the horizon
+to hold the evening's color; a sun disc bright enough to bloom; by night a
+larger moon with its seas, a halo, more stars in two tints and a faint band
+of them. **Cloud shadows cross the land and the water** from the same field,
+which is the cheapest life in the game: the canyon floor and the beach are no
+longer one value. Cover and shadow depth are per light key (`clouds`,
+`cloudShadow`). None of it is information; none of it points at the dog.
+
+## D57 — Light is retuned for contrast, and the woods get a blue hour
+
+Daylight keys were about 1.75x albedo in sun, which put every pale surface on
+the shoulder and is why the game looked washed. Sun plus ambient now lands
+pale ground near display white and lets shade fall to a third of it, cool.
+Shade walls take bounce from sunlit ground (`uAmbGround`), so the noon town is
+pale stone and deep blue shade rather than khaki. The woods had an ember key
+and a navy key and nothing between, and interpolating them is mud: a
+**blue-hour key at 0.62** (violet horizon, indigo top) gives the middle of the
+chapter a color of its own. Low haze (`haze`, `hazeY`, `hazeFall`, `hazeDist`)
+lies on the river in the morning, among the trunks at dusk and on the sea at
+night. The moon moved to the south-west so it hangs over the water ahead of
+the walk home.
+
+## D58 — The ground is painted (amends "every polygon one flat colour", D37)
+
+Terrain and paths carry a slow wash (about 10 m) and a fine tooth near the
+eye, both from the noise texture, multiplied into the vertex color. Facets
+still take one plane of light each. Inside the town walls the ground is laid
+flagstones, drawn in the shader, faded by 60 m. Characters take a sky-light
+rim so the two of them never sink into the picture.
+
+## D59 — The camera sits lower and looks further; it rests; in town it has a boom
+
+Follow distance 6.9 m, height 3.0 m (was 7.8 and 3.8), looking 5 m ahead, 48
+degrees: the boy sits on the lower third and the sky is in the frame. **Stand
+still for a few seconds and the frame opens** (further back, wider look): the
+place gets its own look, with no button. **In the lanes** the camera is on a
+boom that stays in the street: it shortens round a corner instead of climbing
+a house (the old rise put it inside buildings at the land gate), and it drops
+to pass under covered passages and the town gates, which are exported by
+dressing as `archSpots`. **At the bolt** the camera turns to what the dog is
+staring at (nothing), and in open ground with no path it turns to the dog.
+The day opens facing up the canyon. The first move out of the title is slow.
+
+## D60 — The ending is three shots, and they go in together (supersedes D46's staging)
+
+The house stood at y 7 on ground at y 10; the lower floor, the door and the
+spill of light were underground. **A garden terrace** is cut for it (an area
+with `"walk": false`: it levels the land and is not walkable, a general flag),
+the house moved onto the gate's axis, and the garden dressed in data: a
+flagged path (`flags`), pots, and **his bowl by his own door, the same blue
+bowl the woman in the washing courtyard keeps for him.** The cut: (1) behind
+the boy, the dog at the gate under the lit house; (2) over the dog down a long
+lens, the door opens on a lit room and a figure, no face, no voice; (3) rising
+behind them as the gate swings and **the boy and the dog walk up the path
+together** into the fade. The dog still does not come to the boy: the boy
+comes to him, and only then does he fall in. Staged walking is a general
+mechanism (`script`, plan points the boy goes to in turn).
+
+## D61 — Fireflies, after the eyes
+
+Green-gold lights over the grass where the trees give out, along the back of
+the beach and in the garden (`fireflies` in a chapter's `life`; one draw,
+`fx.ts`). Never before the eyes in the woods, because two lights in the dark
+must be him, and never the window gold.
+
+## D62 — The wordmark carries the route line (amends the red rule's list)
+
+Red is still the dog's. The dotted route line now appears in three places
+instead of two, and all three are the same line: on the map, in the wordmark
+on the title and last screen, and in the loading dots and favicon. It ends in
+one dot of window gold, which is home. Nothing in the world is red; the audit
+is unchanged and passes (the UI takes the color from `COLLAR`, never a
+literal).
+
+## D63 — Presentation
+
+A title lockup (Fraunces, set large, letters rising out of their lines) over
+the live canyon, with Begin, Continue and Chapters; on a phone held upright
+the name sits in the sky and the choices at the thumb, with the two of them
+between. Three lines of small print say what a visitor needs before
+committing: sound, length, controls. Loading is paper and the line beginning,
+compositor-only so it moves while the world is built. Chapter cards carry a
+numeral and the time of day (`time` in each chapter) with the place name. The
+pause menu, the last screen (with Share), the favicon, the manifest and the
+share image are of a piece. **Fraunces is self-hosted** (`@fontsource-variable`,
+OFL): no third-party request, and the face is there on first paint. The
+controls step back during staged moments, and an idle mouse pointer hides.
+Gamepad: stick or d-pad walks, a face button whistles, Start is the menu.
+
+## D64 — What was measured
+
+Software WebGL, so frame times are not claims; counts are exact
+(`renders/probe/look/report.json` against `renders/probe/after/`). Triangles
+at the nine spots: 122k to 724k (was 118k to 725k). Draw calls: 150 to 408
+(was 121 to 337); the post stack adds about ten small passes per frame, and
+the lower camera sees more of the town on the approach (408 at ch2 0.15, was
+305). Pacing is unchanged by this session: medians 3.6, 2.9, 4.3 and 7.9 s,
+longest gap 19 s, none over 25 s. The bundle is 1.34 MB of script (394 kB
+gzipped, was 384) plus two font files of 121 and 150 kB. **None of this was run on a
+real GPU or a real phone, and none of the sound was heard.**

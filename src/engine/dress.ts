@@ -15,6 +15,8 @@ const CHUNK = 120
 /** Low washing lines over the alleys: the boy ducks under these. Plan segment and height. */
 export const duckLines: { x0: number; z0: number; x1: number; z1: number; y: number }[] = []
 /** Brush and reed beds on the way: he pushes through, they part. */
+/** covered passages over the lanes: the camera goes under them, not over */
+export const archSpots: { x: number; z: number }[] = []
 export const brushPatches: { x: number; z: number; r: number; kind: string }[] = []
 /** The fronts of the town's houses, for people who lean out of windows. */
 export const houseFronts: { x: number; z: number; yaw: number; base: number; floors: number; w: number }[] = []
@@ -416,6 +418,8 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
     const g = K.gateArch()
     g.applyMatrix4(K.T(gx, gy - 0.1, gz, 0, rot, 0))
     geos.push(g)
+    // the gates through the wall are passages too
+    archSpots.push({ x: gx, z: gz })
   }
   {
     const [tx, tz] = t.tower
@@ -492,6 +496,7 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
       const g = K.alleyArch(half * 2 + 1.6, walls[Math.floor(r() * walls.length)], roofs[Math.floor(r() * roofs.length)])
       g.applyMatrix4(K.T(x, line.e(0, s) - 0.15, z, 0, Math.atan2(tx, tz), 0))
       geos.push(g)
+      archSpots.push({ x, z })
     }
   }
 
