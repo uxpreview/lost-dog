@@ -923,3 +923,23 @@ the lower camera sees more of the town on the approach (408 at ch2 0.15, was
 longest gap 19 s, none over 25 s. The bundle is 1.34 MB of script (394 kB
 gzipped, was 384) plus two font files of 121 and 150 kB. **None of this was run on a
 real GPU or a real phone, and none of the sound was heard.**
+
+## D65 — The first stretch of the canyon has a shape
+
+The human: "the first part of the walk is boring." Nine stills along the
+first 120 m showed why: one straight, flat, 5 m trail up the east side with
+the same two walls in every frame, and nothing underfoot until the ford 47 s
+in. **Ruling, all of it data plus one general prop kind:** the trail now comes
+down to the river's edge and runs along the water, turns east to face a
+**waterfall** off the shaded wall (`waterfall` in `props`: a ribbon laid on
+whatever face is there, `fallsMaterial`), and wades the **brook** it feeds (a
+new river in `world.json`, so the map draws it too) before turning north
+again. The camera follows the trail's tangent, so each bend is a new picture.
+The dog's stops are restaged on it: nose in the wrack at the river's edge,
+waiting on the bend with the falls behind him, a drink from the brook, across,
+and a shake on the far side; after the ford he now rolls dry instead of
+shaking twice. The wait before the bolt is 26 s, was 34. On autopilot the
+first thing underfoot now comes at 24 s (brush) and 30 s (the brook), was 22 s
+and 47 s; chapter median gap 2.3 s (was 3.6), longest 11 s, the chapter is
+3.6 s longer. The waterfall is a cascade down a 50 degree slope, not a plunge:
+the wall is not steep enough there for one.

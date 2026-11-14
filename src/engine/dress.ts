@@ -8,7 +8,7 @@ import type { World } from './world'
 import { rng, smoothstep } from './noise'
 import * as K from './kit'
 import { PAL } from './palette'
-import { worldMaterial } from './materials'
+import { worldMaterial, fallsMaterial, glowMaterial } from './materials'
 
 const CHUNK = 120
 
@@ -218,7 +218,13 @@ export function dress(w: World, quality: number): THREE.Group {
 
   // ---------------------------------------------------------------- per-chapter props
   w.chapters.forEach((ch) => {
-    for (const p of ch.props ?? []) placeProp(w, p, root, p.kind === 'reeds' || p.kind === 'brush' ? matLow : matStatic, r)
+    for (const p of ch.props ?? []) {
+      if (p.kind === 'waterfall') {
+        root.add(buildFalls(w, p))
+        continue
+      }
+      placeProp(w, p, root, p.kind === 'reeds' || p.kind === 'brush' ? matLow : matStatic, r)
+    }
     if (ch.home) {
       const [gx, gy, gz] = ch.home.gate
       const [hx, , hz] = ch.home.house
@@ -537,6 +543,59 @@ import { mergeGeometries as _merge } from 'three/examples/jsm/utils/BufferGeomet
 const THREE_UTILS = { mergeGeometries: _merge }
 
 // ------------------------------------------------------------------------ props
+
+/**
+ * A waterfall from `from` (plan, up on the wall) to `to` (plan, at its foot):
+ * a ribbon laid just off the land along that line, so it follows whatever
+ * face is there, and a pale boil of foam where it lands.
+ */
+function buildFalls(w: World, p: Record<string, unknown>): THREE.Group {
+  const [ax, az] = p.from as number[]
+  const [bx, bz] = p.to as number[]
+  const width = (p.width as number) ?? 2
+  const L = Math.hypot(bx - ax, bz - az)
+  const n = Math.max(4, Math.ceil(L / 1.2))
+  const nx = -(bz - az) / L
+  const nz = (bx - ax) / L
+  const pos: number[] = []
+  const uv: number[] = []
+  const idx: number[] = []
+  let run = 0
+  let px = ax
+  let py = w.ground(ax, az)
+  let pz = az
+  for (let i = 0; i <= n; i++) {
+    const t = i / n
+    const x = ax + (bx - ax) * t
+    const z = az + (bz - az) * t
+    const y = w.ground(x, z) + 0.3 + 0.5 * Math.sin(t * Math.PI)
+    run += Math.hypot(x - px, y - py, z - pz)
+    px = x
+    py = y
+    pz = z
+    // it gathers as it falls: narrow at the lip, wider at the foot
+    const half = (width * (0.55 + 0.6 * t)) / 2
+    pos.push(x - nx * half, y, z - nz * half, x + nx * half, y, z + nz * half)
+    uv.push(0, run, 1, run)
+    if (i < n) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2)
+  }
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2))
+  geo.setIndex(idx)
+  geo.computeBoundingSphere()
+  const g = new THREE.Group()
+  const fall = new THREE.Mesh(geo, fallsMaterial())
+  fall.renderOrder = 3
+  g.add(fall)
+  const boil = new THREE.Mesh(new THREE.PlaneGeometry(width * 3.2, width * 3.2).rotateX(-Math.PI / 2), glowMaterial('#EAF4F2', false))
+  ;(boil.material as THREE.ShaderMaterial).uniforms.uAlpha.value = 0.6
+  boil.position.set(bx, (w.waterY(bx, bz) ?? w.ground(bx, bz)) + 0.06, bz)
+  boil.renderOrder = 4
+  g.add(boil)
+  g.name = 'waterfall'
+  return g
+}
 
 function v3(a: unknown, w: World): THREE.Vector3 {
   const p = a as number[]

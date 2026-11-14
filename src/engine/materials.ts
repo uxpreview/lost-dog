@@ -481,6 +481,60 @@ export function waterMaterial(shallow: string, deep: string, river: boolean) {
   })
 }
 
+// ---------------------------------------------------------------- falling water
+
+/** A cascade down a rock face: white streaks running down a ribbon laid on the land. uv.y is meters along the fall. */
+export function fallsMaterial() {
+  return new THREE.ShaderMaterial({
+    uniforms: { ...U, uShallow: { value: new THREE.Color('#8CC2B2') } },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      varying vec3 vWorldPos;
+      varying float vViewDist;
+      void main() {
+        vUv = uv;
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorldPos = wp.xyz;
+        vec4 mv = viewMatrix * wp;
+        vViewDist = length(mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uTime;
+      uniform sampler2D uNoise;
+      uniform vec3 uShallow;
+      uniform vec3 uAmbSky;
+      uniform vec3 uSunColor;
+      uniform vec3 uFogColor;
+      uniform float uFogNear;
+      uniform float uFogFar;
+      varying vec2 vUv;
+      varying vec3 vWorldPos;
+      varying float vViewDist;
+      void main() {
+        // long streaks running down, and a quicker finer set over them
+        float a = texture2D(uNoise, vec2(vUv.x * 0.9, vUv.y * 0.022 - uTime * 0.5)).g;
+        float b = texture2D(uNoise, vec2(vUv.x * 2.6 + 0.3, vUv.y * 0.06 - uTime * 0.95)).r;
+        float body = a * 0.55 + b * 0.55;
+        float streak = smoothstep(0.42, 0.66, body);
+        // ragged at the sides, torn through the middle: falling water, not a sheet
+        float side = min(vUv.x, 1.0 - vUv.x);
+        float edge = smoothstep(0.02, 0.2 + 0.22 * b, side);
+        float torn = smoothstep(0.3, 0.46, body);
+        vec3 col = mix(uShallow * 1.15, vec3(0.98, 0.99, 0.97), 0.6 + 0.4 * streak) * (uAmbSky * 1.7 + uSunColor * 0.5 + 0.1);
+        float alpha = edge * torn * mix(0.75, 1.0, streak);
+        float f = smoothstep(uFogNear, uFogFar, vViewDist);
+        col = mix(col, uFogColor, f * (0.6 + 0.4 * f));
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  })
+}
+
 // ---------------------------------------------------------------- sky
 
 const SKY_VERT = /* glsl */ `

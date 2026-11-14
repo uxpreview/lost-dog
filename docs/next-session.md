@@ -42,6 +42,11 @@ Judge, in this order:
 
 ## 2. Known weak spots
 
+- **The waterfall is a chute, not a plunge** (D65). The east wall is about 50
+  degrees where it comes down. A steeper notch in the wall there (a `soften`
+  in reverse on the canyon valley, or a short dry side valley) would let it
+  fall. Judge the new first stretch by hand before spending on it.
+
 - **Characters up close.** The dog's head is a few icosahedra; the second
   ending shot stays far enough back to forgive it, and nothing else frames
   him closely. A better dog is the single most valuable modeling job left.

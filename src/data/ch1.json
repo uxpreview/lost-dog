@@ -11,10 +11,15 @@
   "map": true,
   "main": [
     [70, 30, 4.2, 5],
-    [74, 8, 4.8],
-    [70, -22, 5.5],
-    [74, -56, 6.3],
-    [70, -90, 7.2],
+    [75, 12, 4.7, 4.4],
+    [70, -6, 5.15, 3.6],
+    [62, -22, 5.45, 3.2],
+    [58.5, -38, 5.8, 3.2],
+    [61, -46.5, 5.98, 3.2],
+    [71.5, -51.5, 6.25, 3.4],
+    [75.5, -64, 6.15, 4],
+    [72, -78, 6.95, 4],
+    [70, -92, 7.3],
     [66, -114, 7.6],
     [60, -126, 7.55, 4],
     [50, -133, 7.45, 3.6],
@@ -41,7 +46,7 @@
     {
       "_name": "the gravel bar",
       "path": [
-        [74, 8, 4.8],
+        [75, 12, 4.7],
         [88, -6, 5.2, 3.5],
         [94, -26, 5.8, 3.2]
       ]
@@ -74,7 +79,7 @@
       "type": "heel",
       "at": [67, 36],
       "until": {
-        "time": 34,
+        "time": 26,
         "whistles": 3
       }
     },
@@ -85,25 +90,39 @@
       "hold": 1.8
     },
     {
+      "_name": "down at the river's edge, nose in the wrack",
       "type": "business",
-      "at": [64.5, -20],
+      "at": [59.5, -23],
       "act": "sniff"
     },
     {
+      "_name": "on the bend where the waterfall comes into view, looking back",
       "type": "perch",
-      "at": [72, -62],
-      "release": 22,
+      "at": [70, -51],
+      "release": 20,
       "pose": "stand"
     },
     {
+      "_name": "a drink from the brook below the falls",
+      "type": "business",
+      "at": [78, -61.6],
+      "act": "drink",
+      "prop": [78.6, -63]
+    },
+    {
+      "_name": "through the brook, and he shakes it off on the far side",
+      "type": "business",
+      "at": [72.6, -71.5],
+      "act": "shake"
+    },
+    {
       "type": "invite",
-      "at": [70, -89]
+      "at": [70, -90]
     },
     {
       "type": "business",
-      "at": [55.4, -119.4],
-      "act": "drink",
-      "prop": [53, -120]
+      "at": [63.5, -115],
+      "act": "sniff"
     },
     {
       "type": "hazard",
@@ -112,9 +131,10 @@
       "pose": "sit"
     },
     {
+      "_name": "over the ford, he rolls himself dry in the dust",
       "type": "business",
       "at": [31, -156],
-      "act": "shake"
+      "act": "roll"
     },
     {
       "type": "business",
@@ -189,6 +209,26 @@
   ],
   "props": [
     {
+      "_name": "the waterfall off the east wall: seen from the bend, a white thread on shaded rock",
+      "kind": "waterfall",
+      "from": [113, -61],
+      "to": [91.5, -62.2],
+      "width": 1.8
+    },
+    {
+      "_name": "boulders round the foot of the falls",
+      "kind": "rocks",
+      "at": [91, -66.5],
+      "r": 4,
+      "n": 8
+    },
+    {
+      "_name": "reeds on the river bank, where the trail comes down to the water",
+      "kind": "reeds",
+      "at": [55.6, -32],
+      "r": 3.2
+    },
+    {
       "kind": "log",
       "from": [18, 12.35, -291],
       "to": [22, 12.35, -307],
@@ -211,7 +251,7 @@
     },
     {
       "kind": "brush",
-      "at": [72, -44],
+      "at": [65.5, -49],
       "r": 3
     },
     {
@@ -359,6 +399,20 @@
   ],
   "life": [
     {
+      "_name": "rings on the pool under the falls",
+      "kind": "fish",
+      "at": [87, -63],
+      "r": 2.2,
+      "y": 6.44
+    },
+    {
+      "kind": "dragonflies",
+      "at": [79, -63.5],
+      "r": 5,
+      "y": 6.9,
+      "n": 4
+    },
+    {
       "_name": "fish in the swimming spot",
       "kind": "fish",
       "at": [54, 40],
@@ -367,7 +421,7 @@
     },
     {
       "kind": "butterflies",
-      "at": [70, -30],
+      "at": [64, -33],
       "r": 10,
       "n": 3
     },
