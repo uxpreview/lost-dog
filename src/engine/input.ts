@@ -1,4 +1,4 @@
-// One input bus for keyboard, touch joystick and the whistle button.
+// One input bus for keyboard, touch joystick, gamepad and the whistle button.
 // move is camera-relative: x = right, z = forward.
 
 export const input = {
@@ -20,6 +20,10 @@ function recompute() {
   if (keys.has('KeyS') || keys.has('ArrowDown')) z -= 1
   if (keys.has('KeyA') || keys.has('ArrowLeft')) x -= 1
   if (keys.has('KeyD') || keys.has('ArrowRight')) x += 1
+  if (pad.active && (pad.x || pad.z)) {
+    x = pad.x
+    z = pad.z
+  }
   if (input.joy.active) {
     x = input.joy.x
     z = input.joy.z
@@ -31,6 +35,42 @@ function recompute() {
   }
   input.move.x = x
   input.move.z = z
+}
+
+// ---------------------------------------------------------------- gamepad
+// Left stick or d-pad walks, any face button whistles, Start is the menu.
+const pad = { x: 0, z: 0, whistle: false, menu: false, active: false }
+export function pollGamepad() {
+  const pads = typeof navigator !== 'undefined' && navigator.getGamepads ? navigator.getGamepads() : []
+  let gp: Gamepad | null = null
+  for (const p of pads) if (p && p.connected) gp = gp ?? p
+  if (!gp) {
+    if (pad.active) {
+      pad.active = false
+      pad.x = pad.z = 0
+      recompute()
+    }
+    return
+  }
+  let x = gp.axes[0] ?? 0
+  let z = -(gp.axes[1] ?? 0)
+  if (gp.buttons[14]?.pressed) x = -1
+  if (gp.buttons[15]?.pressed) x = 1
+  if (gp.buttons[12]?.pressed) z = 1
+  if (gp.buttons[13]?.pressed) z = -1
+  const m = Math.hypot(x, z)
+  const k = m < 0.18 ? 0 : Math.min(1, (m - 0.18) / 0.72) / (m || 1)
+  pad.x = x * k
+  pad.z = z * k
+  pad.active = true
+  const w = [0, 1, 2, 3].some((i) => gp!.buttons[i]?.pressed)
+  if (w && !pad.whistle) requestWhistle()
+  pad.whistle = w
+  const mn = !!gp.buttons[9]?.pressed
+  if (mn && !pad.menu) input.menu = true
+  pad.menu = mn
+  if (m > 0.18) touchAny()
+  recompute()
 }
 
 export function setJoy(active: boolean, x = 0, z = 0) {

@@ -25,6 +25,18 @@ export interface Light {
   fogFar: number
   stars: number
   moon: number
+  /** cloud cover 0..1, and how dark their shadows fall on the land (0..1) */
+  clouds?: number
+  cloudShadow?: number
+  /** low haze: amount 0..1, the height it lies at, how many meters it takes to thin, the distance it gathers over */
+  haze?: number
+  hazeY?: number
+  hazeFall?: number
+  hazeDist?: number
+  /** light shafts from the sun through whatever stands in front of it */
+  rays?: number
+  bloom?: number
+  exposure?: number
 }
 
 export type DogNode =
@@ -51,6 +63,8 @@ export interface Area {
   poly?: P2[]
   y?: number
   surface: Surface
+  /** false: a terrace. It levels the land (a garden, a yard) but is not somewhere the boy walks. */
+  walk?: boolean
 }
 
 export interface Witness {
@@ -67,6 +81,8 @@ export interface Witness {
 export interface Chapter {
   id: string
   title: string
+  /** the time of day, shown small under the place name on the chapter card */
+  time: string
   bed: 'canyon' | 'town' | 'woods' | 'shore'
   walkSpeed: number
   gait: 'light' | 'tired' | 'calm'

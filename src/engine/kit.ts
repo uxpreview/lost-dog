@@ -881,6 +881,21 @@ export function kiln(r: R) {
   return k.build()
 }
 
+/** Flat stones set in the earth, a garden path from a to b. Walked on, never hopped. */
+export function pathFlags(a: THREE.Vector3, b: THREE.Vector3, count: number, r: R) {
+  const k = new Kit()
+  const yaw = Math.atan2(b.x - a.x, b.z - a.z)
+  for (let i = 0; i < count; i++) {
+    const t = (i + 0.5) / count
+    const side = (i % 2 ? 1 : -1) * 0.16
+    const x = a.x + (b.x - a.x) * t + Math.cos(yaw) * side
+    const z = a.z + (b.z - a.z) * t - Math.sin(yaw) * side
+    const y = a.y + (b.y - a.y) * t
+    k.add(cyl(6), r() < 0.5 ? PAL.stoneC : PAL.stoneD, T(x, y - 0.05, z, 0, yaw + (r() - 0.5) * 0.7, 0, 0.62 + r() * 0.2, 0.09, 0.5 + r() * 0.16), { tone: 0.92 + r() * 0.1 })
+  }
+  return k.build()
+}
+
 /** A dog's water bowl by someone's door. */
 export function dogBowl() {
   const k = new Kit()

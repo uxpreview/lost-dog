@@ -16,10 +16,10 @@ import { buildTerrain, buildPaths, buildSea, buildRivers, buildSky, bindHeightMa
 import { dress, duckLines, brushPatches, houseFronts } from './dress'
 import { Boy, Folk, camQuat, folkIdle, type FolkIdle } from './characters'
 import { DogActor, type DogCtx } from './dog'
-import { Birds, Prints, Rings, Motes } from './fx'
+import { Birds, Prints, Rings, Motes, Fireflies } from './fx'
 import { Life } from './life'
 import { Post } from './post'
-import { input, clearKeys } from './input'
+import { input, clearKeys, pollGamepad } from './input'
 import { useUI } from './store'
 import { loadSave, writeSave, type Save } from './save'
 import { audio } from './audio'
@@ -33,6 +33,8 @@ export const CHAPTERS = [ch1, ch2, ch3, ch4] as unknown as Chapter[]
 
 const tmpC = new THREE.Color()
 const tmpC2 = new THREE.Color()
+const tmpV = new THREE.Vector3()
+const tmpV2 = new THREE.Vector3()
 
 interface FolkRt {
   def: Witness
@@ -86,6 +88,7 @@ export class Game {
   feet = new Prints(false, 160)
   rings = new Rings()
   motes = new Motes()
+  fireflies!: Fireflies
   life: Life
   /** meshes only drawn near the camera (ground cover) */
   private nearOnly: THREE.Mesh[] = []
@@ -140,6 +143,7 @@ export class Game {
     door: THREE.Object3D
     gate: THREE.Object3D
     light: THREE.Mesh
+    glow: THREE.Mesh
     figure: Folk
     windowsMat: THREE.ShaderMaterial
     halo: THREE.ShaderMaterial
@@ -168,7 +172,7 @@ export class Game {
 
   constructor(quality: number, onProgress?: (p: number) => void) {
     this.quality = quality
-    this.post = new Post(quality > 0.7 ? 4 : 2)
+    this.post = new Post(quality > 0.7 ? 4 : 2, quality)
     this.save = loadSave()
     onProgress?.(0.1)
     this.world = new World(worldData as unknown as WorldData, CHAPTERS)
@@ -176,6 +180,8 @@ export class Game {
     onProgress?.(0.5)
     const s = this.scene
     bindHeightMap(this.world)
+    const town = CHAPTERS.find((c) => c.town)?.town
+    if (town) U.uTown.value.set(town.center[0], town.center[1], town.radius)
     this.sky = buildSky()
     s.add(this.sky)
     s.add(buildTerrain(this.world))
@@ -203,6 +209,16 @@ export class Game {
       }
     this.life = new Life(this.world, CHAPTERS)
     s.add(this.life.group)
+    this.fireflies = new Fireflies(
+      CHAPTERS.flatMap((c) => (c.life ?? []).filter((l) => l.kind === 'fireflies')).map((l) => ({
+        x: l.at[0],
+        z: l.at[1],
+        y: this.world.ground(l.at[0], l.at[1]),
+        r: l.r ?? 12,
+        n: l.n ?? 12,
+      })),
+    )
+    s.add(this.fireflies.points)
     s.add(this.boy.root, this.dog.rig.root, this.birds.group, this.paws.mesh, this.feet.mesh, this.rings.group, this.motes.points)
     this.boy.root.traverse((o) => (o.castShadow = true))
     // the sun (or moon): shadows only; the shader takes its color from U
@@ -261,31 +277,47 @@ export class Game {
     const dl = new THREE.Mesh(K.doorLeaf(), worldMaterial({ vertexColors: true }))
     door.add(dl)
     this.scene.add(door)
-    // the warm spill from the open door, laid on the ground
-    const light = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.8, 7).rotateX(-Math.PI / 2).translate(0, 0, 3.5),
-      new THREE.MeshBasicMaterial({ color: '#F2B950', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }),
-    )
-    light.position.set(hx - 0.8, this.world.ground(hx - 0.8, hz + 5) + 0.06, hz + 3.3)
+    // the warm spill from the open door, laid on the ground: widening, and dying away
+    const spill = new THREE.ShaderMaterial({
+      uniforms: { uAlpha: { value: 0 } },
+      vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform float uAlpha; varying vec2 vUv;
+        void main() {
+          float along = 1.0 - vUv.y;
+          float half_ = mix(0.5, 0.2, vUv.y);
+          float a = smoothstep(half_, half_ - 0.16, abs(vUv.x - 0.5)) * pow(1.0 - along, 1.6) * smoothstep(0.0, 0.04, vUv.y);
+          gl_FragColor = vec4(vec3(0.95, 0.62, 0.2) * a * uAlpha, a * uAlpha);
+        }`,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+    const light = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 8.5).rotateX(-Math.PI / 2).translate(0, 0, 4.25), spill)
+    light.position.set(hx - 0.8, this.world.ground(hx - 0.8, hz + 5) + 0.07, hz + 3.3)
+    light.renderOrder = 4
     this.scene.add(light)
+    // the doorway itself, once the door is open: the room behind it
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.26, 2.26), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.95, 0.56, 0.16).multiplyScalar(1.9), transparent: true, opacity: 0 }))
+    glow.position.set(hx - 0.8, hy + 1.13, hz + 3.25 + 0.04)
+    this.scene.add(glow)
     const figure = new Folk('walker', 1)
     figure.root.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).material = worldMaterial({ color: '#14161C' })
     })
-    figure.root.position.set(hx - 0.8, hy, hz + 2.6)
+    figure.root.position.set(hx - 0.8, hy, hz + 3.42)
     figure.root.visible = false
     this.scene.add(figure.root)
     // a soft halo at each window, the warmest light in the game
     const halos = new THREE.Group()
     const hm = glowMaterial('#F2B950')
     for (const [x, y] of [[1.6, 1.2], [3.0, 1.2], [-2.8, 3.6], [-0.8, 3.6], [1.6, 3.6], [3.0, 3.6]]) {
-      const q = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.6), hm)
+      const q = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 3.2), hm)
       q.position.set(hx + x, hy + y, hz + 3.4)
       q.renderOrder = 6
       halos.add(q)
     }
     this.scene.add(halos)
-    this.home = { door, gate, light, figure, windowsMat: winMat, halo: hm }
+    this.home = { door, gate, light, glow, figure, windowsMat: winMat, halo: hm }
   }
 
   private buildFolk() {
@@ -514,6 +546,20 @@ export class Game {
     this.whistles = 0
     this.eyesShown = false
     this.cutCam = null
+    this.cutShot = -1
+    this.cutKind = ''
+    this.script = null
+    this.dog.homeWith = false
+    this.post.mat.uniforms.uFade.value = 0
+    if (this.home) {
+      // the day begins again with the door shut
+      const h = this.home
+      h.door.rotation.y = 0
+      h.gate.rotation.y = 0
+      h.figure.root.visible = false
+      ;(h.light.material as THREE.ShaderMaterial).uniforms.uAlpha.value = 0
+      ;(h.glow.material as THREE.MeshBasicMaterial).opacity = 0
+    }
     this.timeScale = 1
     if (ci === 0 && !continuing) {
       this.passed.clear()
@@ -561,8 +607,8 @@ export class Game {
   }
 
   private showCard() {
-    this.cardTimer = 5.2
-    useUI.getState().set({ card: this.ch.title })
+    this.cardTimer = 5.6
+    useUI.getState().set({ card: this.ci })
   }
 
   private endChapter() {
@@ -648,20 +694,39 @@ export class Game {
     const lum = U.uSkyTop.value.r * 0.21 + U.uSkyTop.value.g * 0.72 + U.uSkyTop.value.b * 0.07
     this.darkness = smoothstep(0.1, 0.02, lum)
     U.uNight.value = this.darkness
+    // clouds, their shadows, and the low haze
+    const num = (k: keyof Light, d: number) => lerp((a[k] as number | undefined) ?? d, (b[k] as number | undefined) ?? d, t)
+    U.uCloud.value.z = num('clouds', 0.35)
+    U.uCloud.value.w = num('cloudShadow', 0.3)
+    U.uHaze.value.set(num('hazeY', 0), num('hazeFall', 14), num('haze', 0), num('hazeDist', 140))
+    // lit by the sun (or the moon), shaded by the sky they sit in
+    U.uCloudLit.value.copy(tmpC).lerp(tmpC2.set(1, 1, 1), 0.3).multiplyScalar(lerp(1.12, 0.42, this.darkness))
+    U.uCloudShade.value.copy(U.uSkyTop.value).lerp(U.uSkyHorizon.value, 0.5).lerp(tmpC2.set(1, 1, 1), 0.12 * (1 - this.darkness))
+    this.raysWant = num('rays', 0.2)
+    this.bloomWant = num('bloom', 0.45)
+    this.exposureWant = num('exposure', 1)
     // the grade follows the chapter's temperature
     const pm = this.post.mat.uniforms
     const grades: Record<string, [number[], number[], number]> = {
-      canyon: [[0.012, 0.018, 0.03], [1.02, 1.0, 0.96], 1.04],
-      town: [[0.0, 0.012, 0.03], [1.03, 1.01, 0.98], 1.08],
-      woods: [[0.03, 0.012, 0.04], [1.04, 0.98, 0.94], 1.06],
-      shore: [[0.0, 0.02, 0.05], [0.98, 1.0, 1.06], 0.95],
+      canyon: [[0.01, 0.02, 0.04], [1.03, 1.0, 0.95], 1.14],
+      town: [[0.0, 0.014, 0.04], [1.03, 1.01, 0.97], 1.14],
+      woods: [[0.03, 0.012, 0.05], [1.04, 0.98, 0.94], 1.12],
+      shore: [[0.0, 0.02, 0.06], [0.97, 1.0, 1.07], 1.04],
     }
     const [lift, gain, sat] = grades[this.ch.bed]
     const k = snap ? 1 : 0.05
     pm.uLift.value.lerp(new THREE.Vector3(...lift), k)
     pm.uGain.value.lerp(new THREE.Vector3(...gain), k)
     pm.uSat.value = lerp(pm.uSat.value, sat, k)
+    pm.uRays.value = lerp(pm.uRays.value, this.raysWant, k)
+    pm.uBloom.value = lerp(pm.uBloom.value, this.bloomWant, k)
+    pm.uExposure.value = lerp(pm.uExposure.value, this.exposureWant, k)
+    pm.uRayColor.value.copy(U.uSunGlow.value)
   }
+
+  private raysWant = 0.2
+  private bloomWant = 0.45
+  private exposureWant = 1
 
   // ------------------------------------------------------------------ frame
 
@@ -670,11 +735,13 @@ export class Game {
     this.camera.aspect = this.aspect
     this.camera.updateProjectionMatrix()
     this.post.setSize(w * dpr, h * dpr)
+    this.fireflies.setHeight(h * dpr)
   }
 
   update(rawDt: number) {
     const ui = useUI.getState()
     const paused = ui.paused
+    if (!this.piloting) pollGamepad()
     if (input.menu) {
       input.menu = false
       if (this.mode === 'play') ui.set({ paused: !paused })
@@ -697,6 +764,9 @@ export class Game {
     this.updateDisturbances(dt)
     this.updateCamera(dt)
     this.updateSun()
+    // the clouds cross the coast from the sea, slowly, all day
+    U.uCloud.value.x = this.time * 0.0011
+    U.uCloud.value.y = -this.time * 0.0007
     const mc = tmpC.copy(U.uSunColor.value).lerp(new THREE.Color(1, 1, 1), 0.3)
     this.motes.update(this.time, this.px, this.py, this.pz, mc, this.ch.bed === 'canyon' ? 0.5 : this.ch.bed === 'woods' ? 0.35 * (1 - this.darkness) : this.ch.bed === 'town' ? 0.12 : 0)
     camQuat.copy(this.camera.quaternion)
@@ -706,6 +776,11 @@ export class Game {
       if (this.cardTimer <= 0) ui.set({ card: null })
     }
     if (ui.whistleReady !== this.whistleCool <= 0) ui.set({ whistleReady: this.whistleCool <= 0 })
+    // staged moments are letterboxed, and the controls step back for them
+    const cine = this.mode === 'cut' || this.mode === 'end'
+    if (ui.cine !== cine) ui.set({ cine })
+    const pu = this.post.mat.uniforms
+    pu.uBars.value = damp(pu.uBars.value, cine ? (this.aspect < 1 ? 0.045 : 0.07) : 0, cine ? 2.4 : 1.6, rawDt)
   }
 
   private updateTitle(dt: number) {
@@ -753,7 +828,21 @@ export class Game {
     // camera right on the ground is (-cos, sin) for a camera facing (sin, cos)
     let wx = -mx * cy + mz * sy
     let wz = mx * sy + mz * cy
-    const mag = Math.min(1, Math.hypot(mx, mz))
+    let mag = Math.min(1, Math.hypot(mx, mz))
+    if (this.script) {
+      const [sx, sz] = this.script[0]
+      const ddx = sx - this.px
+      const ddz = sz - this.pz
+      const dd = Math.hypot(ddx, ddz)
+      if (dd < 0.3) {
+        this.script.shift()
+        if (!this.script.length) this.script = null
+      } else {
+        wx = ddx / dd
+        wz = ddz / dd
+        mag = 0.62
+      }
+    }
     const surface = this.world.surfaceAt(this.px, this.pz, this.walk)
     const tv = this.traverse(surface, dt)
     const slow = this.onStone > 0.5 ? 0.85 : surface === 'water' ? 0.62 : surface === 'wood' ? 0.7 : 1
@@ -768,13 +857,13 @@ export class Game {
     this.pvz = damp(this.pvz, wz * vmax, 9, dt)
     const nx = this.px + this.pvx * dt
     const nz = this.pz + this.pvz * dt
-    const [cx, cz] = this.world.constrain(this.px, this.pz, nx, nz, this.walk)
+    const [cx, cz] = this.script ? [nx, nz] : this.world.constrain(this.px, this.pz, nx, nz, this.walk)
     const moved = Math.hypot(cx - this.px, cz - this.pz)
     this.pspeed = dt > 0 ? damp(this.pspeed, moved / dt, 12, dt) : this.pspeed
     this.px = cx
     this.pz = cz
     if (mag > 0.05) this.pyaw = dampAngle(this.pyaw, Math.atan2(this.pvx, this.pvz), 10, dt)
-    let ty = this.world.standY(this.px, this.pz, this.walk)
+    let ty = this.world.standY(this.px, this.pz, this.script ? -1 : this.walk)
     // on the stepping stones he is on the stones, hopping from one to the next
     if (this.onStone > 0.5) ty = Math.max(ty, this.hopY)
     this.py = damp(this.py, ty, 16, dt)
@@ -1160,27 +1249,76 @@ export class Game {
       }
     }
     if (this.cutKind === 'home' && this.home) {
+      // Three shots. He comes to the dog; a door opens; they go in together.
       const h = this.home
+      const [hx, hy, hz] = CHAPTERS[3].home!.house
+      const [gx, gy, gz] = CHAPTERS[3].home!.gate
+      const door = new THREE.Vector3(hx - 0.8, hy + 1.15, hz + 3.25)
       const [dx, dz] = [this.dog.x, this.dog.z]
-      this.pyaw = dampAngle(this.pyaw, Math.atan2(dx - this.px, dz - this.pz), 3, dt)
-      if (t > 1.2 && t < 6) this.boy.setPose('kneel', 0.3)
+      const shot = t < 4.4 ? 0 : t < 7.6 ? 1 : 2
+      if (shot !== this.cutShot) {
+        this.cutShot = shot
+        this.snapCamera = true
+      }
+      if (shot === 0) {
+        // behind him: the dog at the gate, the lit house above
+        if (t < 0.05) this.cutAnchor.set(this.px, this.py, this.pz)
+        const a = this.cutAnchor
+        const k = t / 4.4
+        this.pyaw = dampAngle(this.pyaw, Math.atan2(dx - this.px, dz - this.pz), 3, dt)
+        this.cutCam = {
+          pos: new THREE.Vector3(a.x + 2.9 - k * 0.3, a.y + 2.5, a.z + 5.8 - k * 0.8),
+          look: new THREE.Vector3(gx - 0.6, gy + 1.9, gz - 6),
+          fov: 40,
+        }
+      } else if (shot === 1) {
+        // over the two of them, down a long lens: the door
+        const ux = dx - door.x
+        const uz = dz - door.z
+        const ul = Math.hypot(ux, uz) || 1
+        const k = (t - 4.4) / 3.2
+        this.cutCam = {
+          pos: new THREE.Vector3(dx + (ux / ul) * (3.6 - k * 0.3) + 0.5, this.dog.y + 1.85, dz + (uz / ul) * (3.6 - k * 0.3) - 0.3),
+          look: new THREE.Vector3(door.x + 0.5, door.y - 0.2, door.z),
+          fov: 26,
+        }
+      } else {
+        // rising behind them as they go up to the light
+        const k = smoothstep(7.6, 16.5, t)
+        this.cutCam = {
+          pos: new THREE.Vector3(gx + 2.6 + k * 1.2, gy + 3.0 + k * 3.0, gz + 8.2 + k * 3.6),
+          look: new THREE.Vector3(gx - 1.1, gy + 1.3 + k * 0.5, gz - 5.5),
+          fov: 40,
+        }
+      }
+      if (t > 1.2 && t < 4.8) this.boy.setPose('kneel', 0.3)
       if (t > 1.6 && t < 2) this.dog.rig.play('bow', 1.2)
-      const cam = this.ch.cameras?.[0]
-      if (cam) this.cutCam = { pos: new THREE.Vector3(...cam.position), look: new THREE.Vector3(...cam.lookAt), fov: cam.fov ?? 42 }
       // someone opens the door
-      if (t > 4.2) {
-        if (t - dt <= 4.2) audio.door()
-        const o = smoothstep(4.2, 6.2, t)
-        h.door.rotation.y = -o * 1.7
-        ;(h.light.material as THREE.MeshBasicMaterial).opacity = o * 0.55
-        h.figure.root.visible = t > 5
+      if (t > 4.9) {
+        if (t - dt <= 4.9) audio.door()
+        const o = smoothstep(4.9, 6.9, t)
+        h.door.rotation.y = -o * 1.75
+        ;(h.light.material as THREE.ShaderMaterial).uniforms.uAlpha.value = o * 1.7
+        ;(h.glow.material as THREE.MeshBasicMaterial).opacity = smoothstep(4.9, 5.8, t)
+        h.figure.root.visible = t > 5.9
         h.figure.update(dt, 0, 0, 0, 0, 0)
       }
-      if (t > 3.5 && t < 7) h.gate.rotation.y = damp(h.gate.rotation.y, -0.3, 1, dt)
-      const fade = smoothstep(9.5, 12, t)
+      if (t > 3.2) h.gate.rotation.y = damp(h.gate.rotation.y, -1.35, 1.1, dt)
+      // and they go in
+      if (t > 7.2 && !this.script) {
+        if (!this.dog.homeWith) {
+          this.dog.homeWith = true
+          this.script = [
+            [gx, gz + 0.6],
+            [gx - 0.6, gz - 2.2],
+            [door.x + 0.2, door.z + 1.2],
+          ]
+        }
+      }
+      const fade = smoothstep(13.6, 16.4, t)
       this.post.mat.uniforms.uFade.value = fade
       this.post.mat.uniforms.uFadeColor.value.setRGB(0.94, 0.9, 0.81)
-      if (t > 12 && useUI.getState().screen !== 'map' && !useUI.getState().fin) {
+      if (t > 16.5 && useUI.getState().screen !== 'map' && !useUI.getState().fin) {
         this.save.routes[this.ch.id] = this.route.slice()
         this.save.reached = CHAPTERS.length
         writeSave(this.save)
@@ -1191,6 +1329,11 @@ export class Game {
       }
     }
   }
+
+  private cutShot = -1
+  private cutAnchor = new THREE.Vector3()
+  /** staged walking: plan points he goes to in turn, when a moment moves him rather than the player */
+  private script: [number, number][] | null = null
 
   // ------------------------------------------------------------------ people and things
 
@@ -1283,13 +1426,13 @@ export class Game {
     const portrait = this.aspect < 1
     let wantPos: THREE.Vector3
     let wantLook: THREE.Vector3
-    let wantFov = portrait ? lerp(66, 52, smoothstep(0.5, 1, this.aspect)) : 50
+    let wantFov = portrait ? lerp(66, 52, smoothstep(0.5, 1, this.aspect)) : 48
     if (this.mode === 'title') {
       // behind them, looking up the canyon where the day will go
       const a = Math.sin(this.time * 0.06) * 0.8
-      wantPos = portrait ? new THREE.Vector3(70.5 + a * 0.4, 6.4, 45) : new THREE.Vector3(73 + a, 6.2 + Math.sin(this.time * 0.09) * 0.3, 44.5)
+      wantPos = portrait ? new THREE.Vector3(70.5 + a * 0.4, 6.6, 45.5) : new THREE.Vector3(66.2 + a, 6.0 + Math.sin(this.time * 0.09) * 0.3, 45.5)
       wantPos.y = Math.max(wantPos.y, this.world.ground(wantPos.x, wantPos.z) + 2.2)
-      wantLook = portrait ? new THREE.Vector3(66.5, 7.5, 14) : new THREE.Vector3(63 + a * 0.5, 9.5, 4)
+      wantLook = portrait ? new THREE.Vector3(67, 5.9, 14) : new THREE.Vector3(61.5 + a * 0.5, 8.8, 4)
       wantFov = portrait ? 58 : 42
     } else {
       // follow along the route: the camera looks where the dog went
@@ -1308,12 +1451,13 @@ export class Game {
       const want = pathYaw + clamp(angleDiff(pathYaw, moveYaw), -0.5, 0.5) * 0.4
       this.camYaw = dampAngle(this.camYaw, want, this.snapCamera ? 100 : 1.6, dt)
       const town = this.ch.bed === 'town'
-      const dist = town ? 7.2 : 7.8
-      const height = town ? 5.6 : 3.8
+      const dist = town ? 6.9 : 6.9
+      const height = town ? 5.0 : 3.0
+      const lead = town ? 3.4 : 5
       const fx = Math.sin(this.camYaw)
       const fz = Math.cos(this.camYaw)
       wantPos = new THREE.Vector3(this.px - fx * dist, this.py + height, this.pz - fz * dist)
-      wantLook = new THREE.Vector3(this.px + fx * 3, this.py + 1.1, this.pz + fz * 3)
+      wantLook = new THREE.Vector3(this.px + fx * lead, this.py + 1.25, this.pz + fz * lead)
       // keep the camera out of rock and houses: swing toward the open side
       // first (a cliff path is seen from the valley), and only then rise
       const blockedAt = (yaw: number) => {
@@ -1347,7 +1491,7 @@ export class Game {
       this.camSwing = dampAngle(this.camSwing, angleDiff(this.camYaw, bestYaw), 1.5, dt)
       const sw = this.camYaw + this.camSwing
       wantPos = new THREE.Vector3(this.px - Math.sin(sw) * dist, this.py + height, this.pz - Math.cos(sw) * dist)
-      wantLook = new THREE.Vector3(this.px + Math.sin(sw) * 3, this.py + 1.1, this.pz + Math.cos(sw) * 3)
+      wantLook = new THREE.Vector3(this.px + Math.sin(sw) * lead, this.py + 1.25, this.pz + Math.cos(sw) * lead)
       const g = this.world.ground(wantPos.x, wantPos.z)
       if (wantPos.y < g + 1.8) wantPos.y = g + 1.8
       this.frameW = damp(this.frameW, blockedAt(sw), 3, dt)
@@ -1380,7 +1524,7 @@ export class Game {
       }
     }
     // a framed camera can never sit inside the land
-    wantPos.y = Math.max(wantPos.y, this.world.ground(wantPos.x, wantPos.z) + 1.4)
+    wantPos.y = Math.max(wantPos.y, this.world.ground(wantPos.x, wantPos.z) + (this.cutCam ? 0.4 : 1.4))
     if (this.snapCamera) {
       this.camPos.copy(wantPos)
       this.camLook.copy(wantLook)
@@ -1428,6 +1572,14 @@ export class Game {
     this.sun.target.position.set(tx + fx, this.py, tz + fz)
     this.sun.position.set(tx + fx + d.x * 150, this.py + Math.max(d.y, 0.08) * 150, tz + fz + d.z * 150)
     this.sun.target.updateMatrixWorld()
+    // where the sun stands on screen, for the light shafts
+    const v = tmpV.copy(d).multiplyScalar(1000).add(this.camera.position)
+    this.camera.updateMatrixWorld()
+    const front = tmpV2.set(0, 0, -1).applyQuaternion(this.camera.quaternion).dot(d)
+    v.project(this.camera)
+    this.post.sunUv.set(v.x * 0.5 + 0.5, v.y * 0.5 + 0.5)
+    const off = Math.max(Math.abs(v.x), Math.abs(v.y))
+    this.post.sunVisible = front > 0.05 ? smoothstep(1.9, 1.05, off) * smoothstep(-0.06, 0.02, d.y) : 0
   }
 
   /**
@@ -1435,6 +1587,7 @@ export class Game {
    * time, without drawing. Returns a log of what the dog did.
    */
   autopilot(seconds: number, dt = 1 / 30, stopAtDog = true) {
+    this.piloting = true
     const log: string[] = []
     let lastMode = ''
     const ci0 = this.ci
@@ -1462,8 +1615,10 @@ export class Game {
     }
     input.move.x = 0
     input.move.z = 0
+    this.piloting = false
     return log
   }
+  private piloting = false
 
   /**
    * Dev: the pacing metric. Gaps in seconds between noticeable moments since

@@ -553,6 +553,14 @@ function placeProp(w: World, p: Record<string, unknown>, root: THREE.Group, mat:
     case 'stones':
       g = K.steppingStones(v3(p.from, w), v3(p.to, w), (p.count as number) ?? 6, r)
       break
+    case 'flags': {
+      const a = v3(p.from, w)
+      const b = v3(p.to, w)
+      a.y = w.ground(a.x, a.z)
+      b.y = w.ground(b.x, b.z)
+      g = K.pathFlags(a, b, (p.count as number) ?? 8, r)
+      break
+    }
     case 'drywall':
       g = K.dryWall(p.path as [number, number][], p.gap as [number, number], (x, z) => w.ground(x, z), (p.height as number) ?? 1.2, r)
       break
@@ -617,6 +625,7 @@ function placeProp(w: World, p: Record<string, unknown>, root: THREE.Group, mat:
       break
     }
     case 'kiln':
+    case 'pot':
     case 'bowl':
     case 'slab':
     case 'shrine':
@@ -628,6 +637,7 @@ function placeProp(w: World, p: Record<string, unknown>, root: THREE.Group, mat:
       const at = v3(p.at, w)
       g =
         kind === 'kiln' ? K.kiln(r)
+        : kind === 'pot' ? K.pot(r)
         : kind === 'bowl' ? K.dogBowl()
         : kind === 'slab' ? K.slab(r)
         : kind === 'shrine' ? K.shrine()

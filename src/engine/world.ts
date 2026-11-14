@@ -284,7 +284,7 @@ export class World {
 
   areaAt(x: number, z: number, ci: ChapterSel) {
     for (const a of this.areas) {
-      if (!inSel(a.chapter, ci)) continue
+      if (!inSel(a.chapter, ci) || a.walk === false) continue
       if (a.circle && Math.hypot(x - a.circle[0], z - a.circle[1]) <= a.circle[2]) return a
       if (a.poly && inPoly(x, z, a.poly)) return a
     }
@@ -375,7 +375,7 @@ export class World {
       }
     }
     for (const a of this.areas) {
-      if (!inSel(a.chapter, ci) || !a.circle) continue
+      if (!inSel(a.chapter, ci) || !a.circle || a.walk === false) continue
       const [cx, cz, r] = a.circle
       const dx = nx - cx
       const dz = nz - cz

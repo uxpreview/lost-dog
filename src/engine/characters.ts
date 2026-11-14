@@ -70,7 +70,7 @@ export class Boy {
   private trT = 0
 
   constructor() {
-    const mat = worldMaterial({ vertexColors: true })
+    const mat = worldMaterial({ vertexColors: true, rim: true })
     this.hips = pivot(this.root, 0, 0.5, 0)
     mesh(this.hips, piece([[box(), PAL.boyShorts, T(0, 0.02, 0, 0, 0, 0, 0.3, 0.16, 0.2)]]), mat)
     this.torso = pivot(this.hips, 0, 0.06, 0)
@@ -279,7 +279,7 @@ export class DogRig {
   eyeGlow = 0
 
   constructor() {
-    const mat = worldMaterial({ vertexColors: true })
+    const mat = worldMaterial({ vertexColors: true, rim: true })
     this.collarMat = worldMaterial({ color: COLLAR, emissive: new THREE.Color(COLLAR).multiplyScalar(0.12) })
     this.body = pivot(this.root, 0, 0.44, 0)
     mesh(

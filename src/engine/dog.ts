@@ -89,6 +89,8 @@ export class DogActor {
   lat = 0
   speed = 0
   gait: DogGait = 'stand'
+  /** the ending: he walks in at the boy's side (set by the game once the boy has come to him) */
+  homeWith = false
   mode: Mode = 'heel'
   ni = 0
   nodes: NodeRt[] = []
@@ -407,6 +409,19 @@ export class DogActor {
         faceBoy = true
         lookAtBoy = true
         this.excite = 1
+        // once the boy has come to him, he falls in beside him and they go in together
+        if (this.homeWith) {
+          const fx = Math.sin(c.boyYaw)
+          const fz = Math.cos(c.boyYaw)
+          const tx = c.boyX + fx * 0.5 - fz * 0.85
+          const tz = c.boyZ + fz * 0.5 + fx * 0.85
+          const d = Math.hypot(tx - this.x, tz - this.z)
+          moveTo = [tx, tz]
+          speedWant = d < 0.3 ? 0 : clamp(d * 1.8, 0.6, 3)
+          pose = speedWant > 0.3 ? 'walk' : 'stand'
+          faceBoy = false
+          lookAtBoy = !c.boyMoving
+        }
         break
       }
     }
@@ -432,7 +447,7 @@ export class DogActor {
       const want = Math.atan2(c.boyX - this.x, c.boyZ - this.z)
       this.yaw = dampAngle(this.yaw, want, dBoy < 3 ? 3 : 2, dt)
     }
-    const ty = c.world.standY(this.x, this.z, this.mode === 'extra' || this.mode === 'escape' || this.mode === 'vista' ? -1 : c.ci)
+    const ty = c.world.standY(this.x, this.z, this.mode === 'extra' || this.mode === 'escape' || this.mode === 'vista' || this.mode === 'home' ? -1 : c.ci)
     this.y = this.y === 0 ? ty : damp(this.y, ty, 14, dt)
     this.gait = pose
 

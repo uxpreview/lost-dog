@@ -87,7 +87,7 @@ function terrainColor(w: World, k: number, x: number, z: number, slope: number):
 export function buildTerrain(w: World): THREE.Group {
   const g = new THREE.Group()
   g.name = 'terrain'
-  const mat = worldMaterial({ vertexColors: true })
+  const mat = worldMaterial({ vertexColors: true, detail: true })
   const TILE = 48
   for (let tj = 0; tj < w.nz - 1; tj += TILE)
     for (let ti = 0; ti < w.nx - 1; ti += TILE) {
@@ -176,7 +176,7 @@ export function buildPaths(w: World): THREE.Mesh {
   geo.setIndex(idx)
   geo.computeVertexNormals()
   geo.computeBoundingSphere()
-  const m = new THREE.Mesh(geo, worldMaterial({ vertexColors: true }))
+  const m = new THREE.Mesh(geo, worldMaterial({ vertexColors: true, detail: true }))
   m.receiveShadow = true
   m.name = 'paths'
   return m

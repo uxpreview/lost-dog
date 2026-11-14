@@ -14,7 +14,10 @@ export interface MapData {
 interface UIState {
   screen: Screen
   loadProgress: number
-  card: string | null
+  /** the chapter whose card is up (its index), or null */
+  card: number | null
+  /** a staged moment is playing: the controls step back */
+  cine: boolean
   map: MapData | null
   legend: boolean
   paused: boolean
@@ -30,6 +33,7 @@ export const useUI = create<UIState>((set) => ({
   screen: 'loading',
   loadProgress: 0,
   card: null,
+  cine: false,
   map: null,
   legend: false,
   paused: false,
