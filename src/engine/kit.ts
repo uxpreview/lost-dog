@@ -412,10 +412,16 @@ export function reedBed(radius: number, n: number, r: R, ground: (x: number, z: 
       k.add(cone(3), r() < 0.5 ? PAL.duneGrass : PAL.floorGrass, T(x, y, z, (r() - 0.5) * 0.2, r() * 3, (r() - 0.5) * 0.2, 0.09, h, 0.09), { tone: 0.85 + r() * 0.25 })
       if (r() < 0.35) k.add(cyl(4), PAL.pineTrunk, T(x, y + h * 0.78, z, 0, 0, 0, 0.07, 0.22, 0.07), { tone: 1.1 })
     } else {
-      const h = 0.7 + r() * 0.6
-      const w = 0.35 + r() * 0.3
-      k.add(cone(4), r() < 0.5 ? PAL.maquis : PAL.maquisDark, T(x, y, z, 0, r() * 3, 0, w, h, w), { tone: 0.85 + r() * 0.25 })
-      if (r() < 0.25) k.add(ico(0), PAL.awningOchre, T(x, y + h * 0.8, z, 0, 0, 0, 0.12, 0.1, 0.12), { tone: 1 })
+      // tall grass and broom: a fan of thin stems from one root, pale, a few in yellow flower
+      const stems = 4 + Math.floor(r() * 3)
+      for (let j = 0; j < stems; j++) {
+        const h = 0.55 + r() * 0.55
+        const an = r() * Math.PI * 2
+        const lean = 0.12 + r() * 0.3
+        const col = j % 3 === 0 ? PAL.maquis : r() < 0.5 ? PAL.floorGrass : PAL.duneGrass
+        k.add(cone(3), col, T(x + Math.cos(an) * 0.08, y, z + Math.sin(an) * 0.08, Math.cos(an) * lean, r() * 3, -Math.sin(an) * lean, 0.07, h, 0.07), { tone: 0.95 + r() * 0.25 })
+        if (r() < 0.14) k.add(ico(0), PAL.flowerYellow, T(x + Math.cos(an) * (0.08 + lean * h * 0.8), y + h * 0.9, z + Math.sin(an) * (0.08 + lean * h * 0.8), 0, 0, 0, 0.1, 0.09, 0.1), { tone: 1 })
+      }
     }
   }
   return k.build()
@@ -694,11 +700,14 @@ export function heldBroom() {
 
 /** A tuft of grass: a few blades. */
 export function tuft(r: R, col = PAL.floorGrass) {
+  // fine blades fanning from one root, most of them the color of the dry ground
   const k = new Kit()
-  const n = 4 + Math.floor(r() * 3)
+  const n = 7 + Math.floor(r() * 4)
   for (let i = 0; i < n; i++) {
-    const h = 0.25 + r() * 0.35
-    k.add(cone(3), i % 2 ? col : PAL.maquis, T((r() - 0.5) * 0.3, 0, (r() - 0.5) * 0.3, (r() - 0.5) * 0.5, r() * 3, (r() - 0.5) * 0.5, 0.06, h, 0.06), { tone: 0.85 + r() * 0.3 })
+    const h = 0.14 + r() * 0.26
+    const lean = 0.25 + r() * 0.5
+    const a = r() * Math.PI * 2
+    k.add(cone(3), i % 4 === 0 ? PAL.maquis : col, T(Math.cos(a) * 0.05, 0, Math.sin(a) * 0.05, Math.cos(a) * lean, r() * 3, -Math.sin(a) * lean, 0.03, h, 0.03), { tone: 1.0 + r() * 0.25 })
   }
   return k.build()
 }
@@ -878,6 +887,21 @@ export function kiln(r: R) {
   for (let row = 0; row < 3; row++)
     for (let i = 0; i < 4 - row; i++)
       k.add(cyl(5), i % 2 ? PAL.pineTrunk : PAL.woodLight, T(3.2 + i * 0.3 + row * 0.15, row * 0.28, 1.2, Math.PI / 2, 0.1 * (r() - 0.5), 0, 0.28, 1.8, 0.28))
+  return k.build()
+}
+
+/** Flat stones set in the earth, a garden path from a to b. Walked on, never hopped. */
+export function pathFlags(a: THREE.Vector3, b: THREE.Vector3, count: number, r: R) {
+  const k = new Kit()
+  const yaw = Math.atan2(b.x - a.x, b.z - a.z)
+  for (let i = 0; i < count; i++) {
+    const t = (i + 0.5) / count
+    const side = (i % 2 ? 1 : -1) * 0.16
+    const x = a.x + (b.x - a.x) * t + Math.cos(yaw) * side
+    const z = a.z + (b.z - a.z) * t - Math.sin(yaw) * side
+    const y = a.y + (b.y - a.y) * t
+    k.add(cyl(6), r() < 0.5 ? PAL.stoneC : PAL.stoneD, T(x, y - 0.05, z, 0, yaw + (r() - 0.5) * 0.7, 0, 0.62 + r() * 0.2, 0.09, 0.5 + r() * 0.16), { tone: 0.92 + r() * 0.1 })
+  }
   return k.build()
 }
 

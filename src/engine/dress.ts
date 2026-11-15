@@ -8,13 +8,15 @@ import type { World } from './world'
 import { rng, smoothstep } from './noise'
 import * as K from './kit'
 import { PAL } from './palette'
-import { worldMaterial } from './materials'
+import { worldMaterial, fallsMaterial, glowMaterial } from './materials'
 
 const CHUNK = 120
 
 /** Low washing lines over the alleys: the boy ducks under these. Plan segment and height. */
 export const duckLines: { x0: number; z0: number; x1: number; z1: number; y: number }[] = []
 /** Brush and reed beds on the way: he pushes through, they part. */
+/** covered passages over the lanes: the camera goes under them, not over */
+export const archSpots: { x: number; z: number }[] = []
 export const brushPatches: { x: number; z: number; r: number; kind: string }[] = []
 /** The fronts of the town's houses, for people who lean out of windows. */
 export const houseFronts: { x: number; z: number; yaw: number; base: number; floors: number; w: number }[] = []
@@ -49,7 +51,9 @@ export function dress(w: World, quality: number): THREE.Group {
   const matTree = worldMaterial({ vertexColors: true, wind: 1 })
   const matStatic = worldMaterial({ vertexColors: true })
   // low growth moves in the air and parts for the boy and the dog
-  const matLow = worldMaterial({ vertexColors: true, wind: 7, windBase: 0 })
+  // grass and reeds stir and part; bushes are stiff, and only give a little
+  const matLow = worldMaterial({ vertexColors: true, wind: 4, windBase: 0 })
+  const matBush = worldMaterial({ vertexColors: true, wind: 1.2, windBase: 0, push: 0.22 })
 
   const variants: Record<string, { geo: THREE.BufferGeometry; shadow: boolean; mat: THREE.Material; low?: THREE.BufferGeometry }> = {}
   const vr = rng(99)
@@ -60,8 +64,8 @@ export function dress(w: World, quality: number): THREE.Group {
   }
   for (let i = 0; i < 2; i++) variants['cypress' + i] = { geo: K.cypress(vr), shadow: true, mat: matTree }
   for (let i = 0; i < 2; i++) variants['olive' + i] = { geo: K.olive(vr), shadow: true, mat: matTree }
-  for (let i = 0; i < 3; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matLow }
-  for (let i = 0; i < 1; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matLow }
+  for (let i = 0; i < 3; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matBush }
+  for (let i = 0; i < 1; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matBush }
   for (let i = 0; i < 2; i++) variants['rock' + i] = { geo: K.rock(vr, i % 2 ? PAL.limeA : PAL.rockGrey), shadow: false, mat: matStatic }
   for (let i = 0; i < 2; i++) variants['fig' + i] = { geo: K.fig(vr), shadow: true, mat: matTree }
   for (let i = 0; i < 2; i++) variants['carob' + i] = { geo: K.carob(vr), shadow: true, mat: matTree }
@@ -216,7 +220,13 @@ export function dress(w: World, quality: number): THREE.Group {
 
   // ---------------------------------------------------------------- per-chapter props
   w.chapters.forEach((ch) => {
-    for (const p of ch.props ?? []) placeProp(w, p, root, p.kind === 'reeds' || p.kind === 'brush' ? matLow : matStatic, r)
+    for (const p of ch.props ?? []) {
+      if (p.kind === 'waterfall') {
+        root.add(buildFalls(w, p))
+        continue
+      }
+      placeProp(w, p, root, p.kind === 'reeds' || p.kind === 'brush' ? matLow : matStatic, r)
+    }
     if (ch.home) {
       const [gx, gy, gz] = ch.home.gate
       const [hx, , hz] = ch.home.house
@@ -416,6 +426,8 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
     const g = K.gateArch()
     g.applyMatrix4(K.T(gx, gy - 0.1, gz, 0, rot, 0))
     geos.push(g)
+    // the gates through the wall are passages too
+    archSpots.push({ x: gx, z: gz })
   }
   {
     const [tx, tz] = t.tower
@@ -492,6 +504,7 @@ function buildTown(w: World, ci: number, root: THREE.Group, sc: Scatter, r: () =
       const g = K.alleyArch(half * 2 + 1.6, walls[Math.floor(r() * walls.length)], roofs[Math.floor(r() * roofs.length)])
       g.applyMatrix4(K.T(x, line.e(0, s) - 0.15, z, 0, Math.atan2(tx, tz), 0))
       geos.push(g)
+      archSpots.push({ x, z })
     }
   }
 
@@ -533,6 +546,59 @@ const THREE_UTILS = { mergeGeometries: _merge }
 
 // ------------------------------------------------------------------------ props
 
+/**
+ * A waterfall from `from` (plan, up on the wall) to `to` (plan, at its foot):
+ * a ribbon laid just off the land along that line, so it follows whatever
+ * face is there, and a pale boil of foam where it lands.
+ */
+function buildFalls(w: World, p: Record<string, unknown>): THREE.Group {
+  const [ax, az] = p.from as number[]
+  const [bx, bz] = p.to as number[]
+  const width = (p.width as number) ?? 2
+  const L = Math.hypot(bx - ax, bz - az)
+  const n = Math.max(4, Math.ceil(L / 1.2))
+  const nx = -(bz - az) / L
+  const nz = (bx - ax) / L
+  const pos: number[] = []
+  const uv: number[] = []
+  const idx: number[] = []
+  let run = 0
+  let px = ax
+  let py = w.ground(ax, az)
+  let pz = az
+  for (let i = 0; i <= n; i++) {
+    const t = i / n
+    const x = ax + (bx - ax) * t
+    const z = az + (bz - az) * t
+    const y = w.ground(x, z) + 0.3 + 0.5 * Math.sin(t * Math.PI)
+    run += Math.hypot(x - px, y - py, z - pz)
+    px = x
+    py = y
+    pz = z
+    // it gathers as it falls: narrow at the lip, wider at the foot
+    const half = (width * (0.55 + 0.6 * t)) / 2
+    pos.push(x - nx * half, y, z - nz * half, x + nx * half, y, z + nz * half)
+    uv.push(0, run, 1, run)
+    if (i < n) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 1, i * 2 + 3, i * 2 + 2)
+  }
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2))
+  geo.setIndex(idx)
+  geo.computeBoundingSphere()
+  const g = new THREE.Group()
+  const fall = new THREE.Mesh(geo, fallsMaterial())
+  fall.renderOrder = 3
+  g.add(fall)
+  const boil = new THREE.Mesh(new THREE.PlaneGeometry(width * 3.2, width * 3.2).rotateX(-Math.PI / 2), glowMaterial('#EAF4F2', false))
+  ;(boil.material as THREE.ShaderMaterial).uniforms.uAlpha.value = 0.6
+  boil.position.set(bx, (w.waterY(bx, bz) ?? w.ground(bx, bz)) + 0.06, bz)
+  boil.renderOrder = 4
+  g.add(boil)
+  g.name = 'waterfall'
+  return g
+}
+
 function v3(a: unknown, w: World): THREE.Vector3 {
   const p = a as number[]
   if (p.length === 2) return new THREE.Vector3(p[0], w.ground(p[0], p[1]), p[1])
@@ -553,6 +619,14 @@ function placeProp(w: World, p: Record<string, unknown>, root: THREE.Group, mat:
     case 'stones':
       g = K.steppingStones(v3(p.from, w), v3(p.to, w), (p.count as number) ?? 6, r)
       break
+    case 'flags': {
+      const a = v3(p.from, w)
+      const b = v3(p.to, w)
+      a.y = w.ground(a.x, a.z)
+      b.y = w.ground(b.x, b.z)
+      g = K.pathFlags(a, b, (p.count as number) ?? 8, r)
+      break
+    }
     case 'drywall':
       g = K.dryWall(p.path as [number, number][], p.gap as [number, number], (x, z) => w.ground(x, z), (p.height as number) ?? 1.2, r)
       break
@@ -617,6 +691,7 @@ function placeProp(w: World, p: Record<string, unknown>, root: THREE.Group, mat:
       break
     }
     case 'kiln':
+    case 'pot':
     case 'bowl':
     case 'slab':
     case 'shrine':
@@ -628,6 +703,7 @@ function placeProp(w: World, p: Record<string, unknown>, root: THREE.Group, mat:
       const at = v3(p.at, w)
       g =
         kind === 'kiln' ? K.kiln(r)
+        : kind === 'pot' ? K.pot(r)
         : kind === 'bowl' ? K.dogBowl()
         : kind === 'slab' ? K.slab(r)
         : kind === 'shrine' ? K.shrine()

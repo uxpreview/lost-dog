@@ -147,12 +147,12 @@ export class Prints {
 
 export class Rings {
   group = new THREE.Group()
-  private rings: { m: THREE.Mesh; t: number; active: boolean }[] = []
+  private rings: { m: THREE.Mesh; t: number; active: boolean; size: number }[] = []
 
   constructor() {
     const geo = new THREE.RingGeometry(0.9, 1, 48)
     geo.rotateX(-Math.PI / 2)
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 10; i++) {
       const m = new THREE.Mesh(
         geo,
         new THREE.MeshBasicMaterial({ color: '#FFF8E8', transparent: true, opacity: 0, depthWrite: false }),
@@ -160,15 +160,17 @@ export class Rings {
       m.visible = false
       m.renderOrder = 5
       this.group.add(m)
-      this.rings.push({ m, t: 0, active: false })
+      this.rings.push({ m, t: 0, active: false, size: 1 })
     }
   }
 
-  emit(x: number, y: number, z: number, delay = 0) {
+  /** `size` scales the ring: the dog's answer is drawn large enough to see from where the boy stands. */
+  emit(x: number, y: number, z: number, delay = 0, size = 1) {
     const r = this.rings.find((q) => !q.active)
     if (!r) return
     r.active = true
     r.t = -delay
+    r.size = size
     r.m.position.set(x, y + 0.08, z)
   }
 
@@ -177,10 +179,10 @@ export class Rings {
       if (!r.active) continue
       r.t += dt
       if (r.t < 0) continue
-      const k = r.t / 1.1
+      const k = r.t / (1.1 + (r.size - 1) * 0.25)
       r.m.visible = true
-      r.m.scale.setScalar(0.4 + k * 3.2)
-      ;(r.m.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - k) * 0.35
+      r.m.scale.setScalar((0.4 + k * 3.2) * r.size)
+      ;(r.m.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - k) * Math.min(0.8, 0.35 + (r.size - 1) * 0.15)
       if (k >= 1) {
         r.active = false
         r.m.visible = false
@@ -237,6 +239,75 @@ export class Motes {
     this.mat.color.copy(color)
     this.mat.opacity = amount
     this.points.visible = amount > 0.01
+  }
+}
+
+// ------------------------------------------------------------------ fireflies
+
+/**
+ * Small green-gold lights over the grass once the dark is walked through.
+ * One draw for all of them; they wander and blink in the vertex shader. Never
+ * before the eyes in the woods (two lights in the dark must be him), and never
+ * the window gold: that is saved for home.
+ */
+export class Fireflies {
+  points: THREE.Points
+  constructor(spots: { x: number; y: number; z: number; r: number; n: number }[]) {
+    const pos: number[] = []
+    const ph: number[] = []
+    let a = 9001
+    const r = () => ((a = (a * 16807) % 2147483647) / 2147483647)
+    for (const s of spots)
+      for (let i = 0; i < s.n; i++) {
+        const an = r() * Math.PI * 2
+        const d = Math.sqrt(r()) * s.r
+        pos.push(s.x + Math.cos(an) * d, s.y, s.z + Math.sin(an) * d)
+        ph.push(r() * 100)
+      }
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+    geo.setAttribute('aPhase', new THREE.Float32BufferAttribute(ph, 1))
+    geo.computeBoundingSphere()
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { uTime: U.uTime, uNight: U.uNight, uScale: { value: 600 } },
+      vertexShader: /* glsl */ `
+        attribute float aPhase;
+        uniform float uTime;
+        uniform float uNight;
+        uniform float uScale;
+        varying float vA;
+        void main() {
+          float t = uTime;
+          vec3 p = position;
+          p.x += sin(t * 0.31 + aPhase) * 1.6 + sin(t * 0.83 + aPhase * 2.3) * 0.5;
+          p.z += cos(t * 0.27 + aPhase * 1.7) * 1.6 + cos(t * 0.71 + aPhase) * 0.5;
+          p.y += 0.7 + sin(t * 0.52 + aPhase * 3.1) * 0.45 + sin(t * 1.9 + aPhase) * 0.08;
+          float blink = pow(max(sin(t * (0.9 + fract(aPhase) * 0.8) + aPhase * 5.0), 0.0), 2.5);
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          float dist = length(mv.xyz);
+          vA = blink * uNight * (1.0 - smoothstep(45.0, 90.0, dist));
+          gl_PointSize = clamp(uScale * (0.05 + blink * 0.05) / dist, 1.5, 22.0);
+          gl_Position = projectionMatrix * mv;
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        varying float vA;
+        void main() {
+          float d = length(gl_PointCoord - 0.5) * 2.0;
+          float a = pow(max(1.0 - d, 0.0), 1.8);
+          gl_FragColor = vec4(vec3(0.82, 1.0, 0.5) * 2.6 * a * vA, a * vA);
+        }
+      `,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    })
+    this.points = new THREE.Points(geo, mat)
+    this.points.renderOrder = 7
+  }
+  /** point size follows the drawing height, so they are the same size on a phone */
+  setHeight(px: number) {
+    ;(this.points.material as THREE.ShaderMaterial).uniforms.uScale.value = px * 0.9
   }
 }
 

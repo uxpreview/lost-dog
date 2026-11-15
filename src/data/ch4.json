@@ -1,9 +1,11 @@
 {
   "id": "ch4",
   "title": "The Shore",
+  "time": "Night",
   "bed": "shore",
   "walkSpeed": 2.7,
   "gait": "calm",
+  "roam": 12,
   "surface": "sand",
   "prints": true,
   "whistle": "companion",
@@ -51,6 +53,18 @@
       "surface": "sand"
     },
     {
+      "_name": "the garden: a level terrace cut into the hill, from the gate up to the door. Not walked until the ending takes him in",
+      "poly": [
+        [-888, -4],
+        [-874, -4],
+        [-872.5, 14.6],
+        [-887.5, 14.6]
+      ],
+      "y": 6.9,
+      "surface": "dust",
+      "walk": false
+    },
+    {
       "_name": "the gate",
       "circle": [-879, 18, 5],
       "y": 6.5,
@@ -59,7 +73,7 @@
   ],
   "home": {
     "gate": [-880, 6.5, 14],
-    "house": [-886, 7, 2],
+    "house": [-881, 6.9, 1.2],
     "facing": [-870, 36]
   },
   "dog": [
@@ -107,6 +121,22 @@
     }
   ],
   "props": [
+    {
+      "_name": "the garden path, gate to door",
+      "kind": "flags",
+      "from": [-880, 0, 13.2],
+      "to": [-881.7, 0, 5.4],
+      "count": 9
+    },
+    {
+      "_name": "his bowl, by his own door: the same blue bowl the woman in the washing courtyard keeps for him",
+      "kind": "bowl",
+      "at": [-883.0, 5.15]
+    },
+    { "kind": "pot", "at": [-883.9, 4.95] },
+    { "kind": "pot", "at": [-877.0, 4.95] },
+    { "kind": "pot", "at": [-881.9, 14.9] },
+    { "kind": "pot", "at": [-878.1, 14.9] },
     {
       "kind": "boat",
       "at": [-760, 1.4, 86],
@@ -201,38 +231,82 @@
   "lighting": [
     {
       "at": 0,
-      "sun": [196, 13],
-      "sunColor": "#B4C4E0",
-      "sunI": 0.9,
-      "skyTop": "#1C2A48",
-      "skyHorizon": "#3E5572",
-      "ambSky": "#5A6A90",
-      "ambGround": "#343C50",
-      "ambI": 0.8,
-      "fog": "#34466A",
+      "sun": [240, 16],
+      "sunColor": "#C2D0EA",
+      "sunI": 0.72,
+      "skyTop": "#15213E",
+      "skyHorizon": "#3B5478",
+      "ambSky": "#52669A",
+      "ambGround": "#2E3852",
+      "ambI": 0.6,
+      "fog": "#2E4268",
       "fogNear": 50,
       "fogFar": 620,
       "stars": 1,
-      "moon": 1
+      "moon": 1,
+      "clouds": 0.3,
+      "cloudShadow": 0.22,
+      "haze": 0.3,
+      "hazeY": 1,
+      "hazeFall": 7,
+      "hazeDist": 170,
+      "rays": 0.4,
+      "bloom": 0.8
     },
     {
       "at": 1,
-      "sun": [206, 15],
-      "sunColor": "#BCCAE4",
-      "sunI": 0.9,
-      "skyTop": "#1A2644",
-      "skyHorizon": "#3A5070",
-      "ambSky": "#5A6A90",
-      "ambGround": "#343C50",
-      "ambI": 0.8,
-      "fog": "#324466",
+      "sun": [250, 18],
+      "sunColor": "#C6D2EC",
+      "sunI": 0.72,
+      "skyTop": "#141F3C",
+      "skyHorizon": "#385076",
+      "ambSky": "#52669A",
+      "ambGround": "#2E3852",
+      "ambI": 0.6,
+      "fog": "#2C4066",
       "fogNear": 50,
       "fogFar": 620,
       "stars": 1,
-      "moon": 1
+      "moon": 1,
+      "clouds": 0.28,
+      "cloudShadow": 0.2,
+      "haze": 0.3,
+      "hazeY": 1,
+      "hazeFall": 7,
+      "hazeDist": 170,
+      "rays": 0.4,
+      "bloom": 0.85
     }
   ],
   "life": [
+    {
+      "_name": "fireflies in the dune grass",
+      "kind": "fireflies",
+      "at": [-716, 46],
+      "r": 12,
+      "n": 14
+    },
+    {
+      "_name": "fireflies along the back of the beach",
+      "kind": "fireflies",
+      "at": [-792, 56],
+      "r": 20,
+      "n": 18
+    },
+    {
+      "_name": "fireflies up the lane",
+      "kind": "fireflies",
+      "at": [-858, 44],
+      "r": 12,
+      "n": 14
+    },
+    {
+      "_name": "fireflies in the garden",
+      "kind": "fireflies",
+      "at": [-876, 26],
+      "r": 11,
+      "n": 20
+    },
     {
       "kind": "gulls",
       "at": [-770, 110],

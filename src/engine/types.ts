@@ -25,6 +25,18 @@ export interface Light {
   fogFar: number
   stars: number
   moon: number
+  /** cloud cover 0..1, and how dark their shadows fall on the land (0..1) */
+  clouds?: number
+  cloudShadow?: number
+  /** low haze: amount 0..1, the height it lies at, how many meters it takes to thin, the distance it gathers over */
+  haze?: number
+  hazeY?: number
+  hazeFall?: number
+  hazeDist?: number
+  /** light shafts from the sun through whatever stands in front of it */
+  rays?: number
+  bloom?: number
+  exposure?: number
 }
 
 export type DogNode =
@@ -51,6 +63,8 @@ export interface Area {
   poly?: P2[]
   y?: number
   surface: Surface
+  /** false: a terrace. It levels the land (a garden, a yard) but is not somewhere the boy walks. */
+  walk?: boolean
 }
 
 export interface Witness {
@@ -67,10 +81,14 @@ export interface Witness {
 export interface Chapter {
   id: string
   title: string
+  /** the time of day, shown small under the place name on the chapter card */
+  time: string
   bed: 'canyon' | 'town' | 'woods' | 'shore'
   walkSpeed: number
   gait: 'light' | 'tired' | 'calm'
   surface: Surface
+  /** how far off the routes he may wander, in meters, where the land lets him (0 or absent: the routes only) */
+  roam?: number
   prints: boolean
   whistle: 'honest' | 'misleading' | 'companion'
   map: boolean
@@ -81,7 +99,8 @@ export interface Chapter {
   witnesses?: Witness[]
   disturbances?: { kind: 'crate' | 'pigeons' | 'basket' | 'cats' | 'broom'; at: P2 }[]
   falseSources?: { zone: [number, number, number]; answerAt: P3; cue: string }[]
-  cameras?: { trigger: [number, number, number]; position: P3; lookAt: P3; fov?: number }[]
+  /** framed shots. With `exit`, reaching it is a staged moment: the shot holds that many seconds and the chapter ends */
+  cameras?: { trigger: [number, number, number]; position: P3; lookAt: P3; fov?: number; exit?: number }[]
   props?: Record<string, unknown>[]
   life?: import('./life').LifeDef[]
   /** the town's ambient people: at a plan point, or along a walk (s meters, side -1/1, branch index or main) */

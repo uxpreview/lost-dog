@@ -14,6 +14,7 @@
 //   gulls        wheeling over the shore
 //   crabs        sidling on the wet sand; they run for the water
 //   lantern      a night fisherman's lamp far out (cool light, never window gold)
+//   fireflies    after the dark of the woods, over the dunes and the garden (fx.ts)
 //
 // Also the small effects the dog's business needs: dust, drops, water rings.
 
@@ -29,7 +30,7 @@ import { camQuat } from './characters'
 const tmpQ = new THREE.Quaternion()
 
 export interface LifeDef {
-  kind: 'lizards' | 'goats' | 'fish' | 'dragonflies' | 'butterflies' | 'cat' | 'deer' | 'jays' | 'gulls' | 'crabs' | 'lantern'
+  kind: 'lizards' | 'goats' | 'fish' | 'dragonflies' | 'butterflies' | 'cat' | 'deer' | 'jays' | 'gulls' | 'crabs' | 'lantern' | 'fireflies'
   at: P2
   r?: number
   n?: number
@@ -225,6 +226,8 @@ export class Life {
 
     chapters.forEach((ch, ci) => {
       for (const def of ch.life ?? []) {
+        // fireflies are one draw for the whole coast (fx.ts)
+        if (def.kind === 'fireflies') continue
         const g: Group = { def, ci, items: [], noticed: false, t: 0, cool: 0 }
         const [ax, az] = def.at
         const R = def.r ?? 6

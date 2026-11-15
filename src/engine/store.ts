@@ -14,7 +14,10 @@ export interface MapData {
 interface UIState {
   screen: Screen
   loadProgress: number
-  card: string | null
+  /** the chapter whose card is up (its index), or null */
+  card: number | null
+  /** a staged moment is playing: the controls step back */
+  cine: boolean
   map: MapData | null
   legend: boolean
   paused: boolean
@@ -22,6 +25,8 @@ interface UIState {
   reached: number
   touch: boolean
   whistleReady: boolean
+  /** the dog has been out of sight a while: the whistle glows, once or twice, until its use is learned */
+  whistleHint: boolean
   fin: boolean
   set: (p: Partial<UIState>) => void
 }
@@ -30,6 +35,7 @@ export const useUI = create<UIState>((set) => ({
   screen: 'loading',
   loadProgress: 0,
   card: null,
+  cine: false,
   map: null,
   legend: false,
   paused: false,
@@ -37,6 +43,7 @@ export const useUI = create<UIState>((set) => ({
   reached: 0,
   touch: typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0) && matchMedia('(pointer: coarse)').matches,
   whistleReady: true,
+  whistleHint: false,
   fin: false,
   set: (p) => set(p),
 }))

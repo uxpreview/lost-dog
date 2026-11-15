@@ -1,19 +1,26 @@
 {
   "id": "ch1",
   "title": "The Canyon",
+  "time": "Morning",
   "bed": "canyon",
   "walkSpeed": 3.5,
   "gait": "light",
+  "roam": 15,
   "surface": "gravel",
   "prints": true,
   "whistle": "honest",
   "map": true,
   "main": [
     [70, 30, 4.2, 5],
-    [74, 8, 4.8],
-    [70, -22, 5.5],
-    [74, -56, 6.3],
-    [70, -90, 7.2],
+    [75, 12, 4.7, 4.4],
+    [70, -6, 5.15, 3.6],
+    [62, -22, 5.45, 3.2],
+    [58.5, -38, 5.8, 3.2],
+    [61, -46.5, 5.98, 3.2],
+    [71.5, -51.5, 6.25, 3.4],
+    [75.5, -64, 6.15, 4],
+    [72, -78, 6.95, 4],
+    [70, -92, 7.3],
     [66, -114, 7.6],
     [60, -126, 7.55, 4],
     [50, -133, 7.45, 3.6],
@@ -23,9 +30,9 @@
     [34, -214, 9.6],
     [28, -246, 10.4],
     [22, -276, 11.2],
-    [20, -290, 11.6, 3],
-    [20, -299, 12.2, 1.3],
-    [20, -308, 12.2, 3],
+    [20, -289.5, 12.15, 2.6],
+    [20, -299, 12.2, 0.9],
+    [20, -308.5, 12.2, 2.6],
     [10, -309, 12.9, 3.4],
     [-10, -308, 15.8, 3.2],
     [-30, -307, 21.2, 3.2],
@@ -40,7 +47,7 @@
     {
       "_name": "the gravel bar",
       "path": [
-        [74, 8, 4.8],
+        [75, 12, 4.7],
         [88, -6, 5.2, 3.5],
         [94, -26, 5.8, 3.2]
       ]
@@ -73,7 +80,7 @@
       "type": "heel",
       "at": [67, 36],
       "until": {
-        "time": 34,
+        "time": 26,
         "whistles": 3
       }
     },
@@ -84,25 +91,39 @@
       "hold": 1.8
     },
     {
+      "_name": "down at the river's edge, nose in the wrack",
       "type": "business",
-      "at": [64.5, -20],
+      "at": [59.5, -23],
       "act": "sniff"
     },
     {
+      "_name": "on the bend where the waterfall comes into view, looking back",
       "type": "perch",
-      "at": [72, -62],
-      "release": 22,
+      "at": [70, -51],
+      "release": 20,
       "pose": "stand"
     },
     {
+      "_name": "a drink from the brook below the falls",
+      "type": "business",
+      "at": [78, -61.6],
+      "act": "drink",
+      "prop": [78.6, -63]
+    },
+    {
+      "_name": "through the brook, and he shakes it off on the far side",
+      "type": "business",
+      "at": [72.6, -71.5],
+      "act": "shake"
+    },
+    {
       "type": "invite",
-      "at": [70, -89]
+      "at": [70, -90]
     },
     {
       "type": "business",
-      "at": [55.4, -119.4],
-      "act": "drink",
-      "prop": [53, -120]
+      "at": [63.5, -115],
+      "act": "sniff"
     },
     {
       "type": "hazard",
@@ -111,9 +132,10 @@
       "pose": "sit"
     },
     {
+      "_name": "over the ford, he rolls himself dry in the dust",
       "type": "business",
       "at": [31, -156],
-      "act": "shake"
+      "act": "roll"
     },
     {
       "type": "business",
@@ -183,14 +205,35 @@
       "trigger": [-90, -332, 9],
       "position": [-84, 53, -342],
       "lookAt": [-235, 2, -62],
-      "fov": 46
+      "fov": 46,
+      "exit": 7
     }
   ],
   "props": [
     {
+      "_name": "the waterfall off the east wall: seen from the bend, a white thread on shaded rock",
+      "kind": "waterfall",
+      "from": [113, -61],
+      "to": [91.5, -62.2],
+      "width": 1.8
+    },
+    {
+      "_name": "boulders round the foot of the falls",
+      "kind": "rocks",
+      "at": [91, -66.5],
+      "r": 4,
+      "n": 8
+    },
+    {
+      "_name": "reeds on the river bank, where the trail comes down to the water",
+      "kind": "reeds",
+      "at": [55.6, -32],
+      "r": 3.2
+    },
+    {
       "kind": "log",
-      "from": [18, 12.35, -291],
-      "to": [22, 12.35, -307],
+      "from": [19.7, 11.78, -290.6],
+      "to": [20.3, 11.78, -307.8],
       "radius": 0.45
     },
     {
@@ -210,7 +253,7 @@
     },
     {
       "kind": "brush",
-      "at": [72, -44],
+      "at": [65.5, -49],
       "r": 3
     },
     {
@@ -308,37 +351,69 @@
     {
       "at": 0,
       "sun": [146, 22],
-      "sunColor": "#FFE0AE",
-      "sunI": 1.05,
-      "skyTop": "#8FC2D4",
-      "skyHorizon": "#F4E3C0",
-      "ambSky": "#B4C8D6",
-      "ambGround": "#D8BC90",
-      "ambI": 0.7,
-      "fog": "#E9E1C8",
-      "fogNear": 110,
+      "sunColor": "#FFDCA4",
+      "sunI": 0.92,
+      "skyTop": "#6AAED2",
+      "skyHorizon": "#F3E3BE",
+      "ambSky": "#9CB9D2",
+      "ambGround": "#CDB68C",
+      "ambI": 0.4,
+      "fog": "#E6E1CC",
+      "fogNear": 90,
       "fogFar": 900,
       "stars": 0,
-      "moon": 0
+      "moon": 0,
+      "clouds": 0.42,
+      "cloudShadow": 0.34,
+      "haze": 0.34,
+      "hazeY": 4,
+      "hazeFall": 9,
+      "hazeDist": 150,
+      "rays": 0.4,
+      "bloom": 0.5,
+      "exposure": 1.06
     },
     {
       "at": 1,
-      "sun": [160, 32],
-      "sunColor": "#FFE7BD",
-      "sunI": 1.1,
-      "skyTop": "#86BCD2",
-      "skyHorizon": "#F1E6CB",
-      "ambSky": "#B2CAD6",
-      "ambGround": "#D8BE94",
-      "ambI": 0.72,
-      "fog": "#E6E2CE",
+      "sun": [160, 34],
+      "sunColor": "#FFE6BC",
+      "sunI": 0.98,
+      "skyTop": "#62AAD2",
+      "skyHorizon": "#EFE6CC",
+      "ambSky": "#9CBAD2",
+      "ambGround": "#CDB890",
+      "ambI": 0.4,
+      "fog": "#E2E2D0",
       "fogNear": 130,
       "fogFar": 1000,
       "stars": 0,
-      "moon": 0
+      "moon": 0,
+      "clouds": 0.4,
+      "cloudShadow": 0.32,
+      "haze": 0.12,
+      "hazeY": 30,
+      "hazeFall": 14,
+      "hazeDist": 220,
+      "rays": 0.25,
+      "bloom": 0.5,
+      "exposure": 1.06
     }
   ],
   "life": [
+    {
+      "_name": "rings on the pool under the falls",
+      "kind": "fish",
+      "at": [87, -63],
+      "r": 2.2,
+      "y": 6.44
+    },
+    {
+      "kind": "dragonflies",
+      "at": [79, -63.5],
+      "r": 5,
+      "y": 6.9,
+      "n": 4
+    },
     {
       "_name": "fish in the swimming spot",
       "kind": "fish",
@@ -348,7 +423,7 @@
     },
     {
       "kind": "butterflies",
-      "at": [70, -30],
+      "at": [64, -33],
       "r": 10,
       "n": 3
     },

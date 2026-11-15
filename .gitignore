@@ -19,3 +19,5 @@ renders/*
 renders/probe/*
 !renders/probe/before/
 !renders/probe/after/
+# the session that rebuilt the look, cited by docs/decisions.md D64
+!renders/probe/look/

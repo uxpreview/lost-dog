@@ -1,64 +1,82 @@
-# Next session: play it by hand, then thin or thicken
+# Next session: play it on a real machine, with sound on
 
-The last session built the whole "make the walk worth walking" plan (D48 to
-D54 in `decisions.md`). Everything was verified by autopilot, close-up stills
-and the probe, **not by playing it with hands on a keyboard or a phone.** That
-is the first job.
+The last session rebuilt the picture, the frame and the ending (D55 to D64 in
+`decisions.md`). Everything was verified with stills from software WebGL in a
+headless browser: the title, every chapter at desktop and phone portrait, the
+opening half minute, the ending's three shots, the map and the last screen.
+**None of it was seen moving on a real GPU, none of it was held in a hand, and
+none of the sound was heard.** That is the first job, and it is the human's.
 
 ## Where it stands (measured, `node tools/probe.mjs all <label>`)
 
-| | Before | After |
+| | Before this session | After |
 |---|---|---|
-| Canyon: median / longest gap between moments | 18.4 s / 32.4 s | 3.6 s / 11.2 s |
-| Old Town | 12.5 s / 31.4 s | 2.9 s / 19 s |
-| Woods | 21.1 s / 30.5 s | 4.3 s / 11.5 s |
-| Shore | 76.5 s / 76.5 s | 7.9 s / 16.7 s |
-| Gaps over 25 s, whole day | 8 | 0 |
-| Worst triangles (nine spots) | 1.07M (upper town) | 0.73M (woods) |
-| Draw calls (nine spots) | 123 to 333 | 121 to 337 |
+| Triangles, nine spots | 118k to 725k | 122k to 724k |
+| Draw calls, nine spots | 121 to 337 | 150 to 408 |
+| Median gap between moments, ch1 to ch4 | 3.6 / 2.9 / 4.3 / 7.9 s | unchanged |
+| Gaps over 25 s, whole day | 0 | 0 |
+| Script, gzipped | 384 kB | 394 kB, plus 271 kB of font |
 
-Screenshots: `renders/probe/before/` and `renders/probe/after/`.
+Screenshots: `renders/probe/after/` (before) and `renders/probe/look/` (after).
 
-## 1. Play the whole day by hand, desktop and phone portrait
+## 1. Play the whole day by hand, desktop and phone
 
 Judge, in this order:
 
-- **Is it now too busy?** The target was a moment every 15 to 25 s; autopilot
-  says every 3 to 8 s. Autopilot counts everything (a lizard, a head turning,
-  entering the reeds) and walks straight at full speed. If the dog's asides
-  crowd his stops, delete some from the manifests: they are single entries in
-  each chapter's `dog` list (`business`, `invite`, `double-back`).
-- **Does the dog still read as leading?** He bounds to keep his lead after an
-  aside and skips any the boy has passed. Watch for him bounding past the boy
-  too often, which could read as fleeing (rule: he is never fleeing).
-- **The traversal poses at speed:** balance on the log, stones at the ford,
-  the reeds before the ford, the gully scramble, ducking in the town.
-- **Sound.** Every new sound (goat bells, rustle, splash, lapping, digging,
-  shaking off, hooves, breath) is synthesised and was never heard in this
-  session (headless). Listen for anything too loud or wrong.
-- **Mobile:** one thumb, portrait, sound off. Nothing new depends on sound.
+- **Frame rate.** The post stack adds bloom (five half-size passes), light
+  shafts (one quarter-size pass, 28 taps) and a noise lookup or two per
+  pixel. It should be cheap; it has not been timed on hardware. The adaptive
+  resolution in `Root.tsx` will trade pixels if it is not. If a phone
+  struggles, drop shafts first (`rays` to 0 at quality under 0.7 in `post.ts`).
+- **Does bloom shimmer?** Bright facets on moving water are the risk. The
+  bright pass weights hot pixels down; raise `uThreshold` in `post.ts` if it
+  still flickers.
+- **The camera at rest.** Stand still four seconds and it pulls back. Is that
+  a gift or a drift? The amounts are in `updateCamera` (`rest`).
+- **The town boom.** Walk the narrow lanes and both gates. The camera should
+  never be inside a house and should duck under the covered passages.
+- **The ending.** Three shots, about sixteen seconds, then the map. Is the cut
+  to the door earned, and does the walk in read from behind?
+- **Sound.** Still never heard by anyone who built it (see D40, D50).
+- **Mobile:** one thumb, portrait, sound off.
 
 ## 2. Known weak spots
 
-- The lookout vista frames the town through pines; the sea is hidden. Either
-  clear a view corridor in dressing or move the camera.
-- Grass tufts are thin at gameplay distance; flowers read better. Consider
-  bushier tufts before more of them.
-- The cat's bat at the dog's nose is subtle; she mostly just moves off.
-- Ambient people and small critters pop in at 48 m and 55 m; on the long quay
-  this may show.
-- Draw calls are still over the quality-bar figures (200 town, 150 elsewhere),
-  as they were before. Triangles have headroom now.
-- Not built from the old plan: terraces on the hillside (beehives only), reed
-  beds along every bank (three placed by hand), a third variant of every house
-  kind.
+- **Roaming has no obstacles** (D68). He can walk through tree trunks and
+  boulders off the path. Dressing knows where they are; the world does not.
+- **The opening's close shot shows how simple the two models are** (D70). It
+  reads as a boy crouching to his dog; a better dog would make it land.
+
+- **The waterfall is a chute, not a plunge** (D65). The east wall is about 50
+  degrees where it comes down. A steeper notch in the wall there (a `soften`
+  in reverse on the canyon valley, or a short dry side valley) would let it
+  fall. Judge the new first stretch by hand before spending on it.
+
+- **Characters up close.** The dog's head is a few icosahedra; the second
+  ending shot stays far enough back to forgive it, and nothing else frames
+  him closely. A better dog is the single most valuable modeling job left.
+- **The night beach is still broad and plain.** Cloud shadow, haze, fireflies
+  and the moon path carry it now. Wrack lines, more boats, a net-drying rack
+  would help, all placeable in `ch4.json`.
+- **Ground cover looms** in the lower camera's foreground: tufts near the lens
+  are dark cones. Thin them near the path or soften them.
+- **Draw calls** are over the old quality-bar figures, as before, and ten
+  higher from post. The town approach (408) is the worst.
+- **The lookout vista** still frames the town through pines (from the last
+  session's list).
+- **Town windows do not light at dusk.** Seen from the woods' lookout in the
+  last sun they would be lovely, and the window gold is reserved for home.
+  That reservation is worth more; leave it unless the human says otherwise.
 
 ## 3. Open questions for the human
 
-- Raise the chapter walk speeds 10 to 15 percent? Not done. The out-of-sight
-  surge (D52) is in; decide after playing.
-- Longer routes toward the 40 to 50 minute target, or keep densifying?
-  Recommendation still: denser first; the day is about 12 minutes of straight
-  walking.
-- Are three "town knows this dog" moments the right number, and is the
-  missable one (the bowl in the washing courtyard) findable enough?
+- **Photo mode** (pause, orbit, save a still with the wordmark). It suits a
+  game this pictorial and it is how these things get shared. It is not a
+  verb, but it is a feature the design never asked for.
+- **Save the map as an image** from the last screen. The map is SVG with an
+  external stylesheet, so it needs the styles inlined before it can be drawn
+  to a canvas.
+- **Longer routes** toward the 40 to 50 minute target, still open from D41.
+- **The three lines of small print on the title** ("Best with sound", "About
+  fifteen minutes", controls). They are UI, not story, but they are words in
+  a wordless game. Keep, trim or cut.

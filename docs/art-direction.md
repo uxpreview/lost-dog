@@ -22,9 +22,10 @@ The payoff: in every frame that contains the dog, the eye goes to the collar
 first, involuntarily. The search mechanic gets a visual engine for free. One
 undisciplined red awning in the town breaks it for the whole game.
 
-Collar red: `#D0342C`. It appears in exactly one other place, the dotted line
-on the route map, which is drawn in the collar's color. That is deliberate:
-the route is him.
+Collar red: `#D0342C`. It appears in exactly one other form, the dotted route
+line, which is drawn in the collar's color: on the route map, and in the
+wordmark on the title and last screen (D62). That is deliberate: the route is
+him.
 
 ---
 

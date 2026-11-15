@@ -790,3 +790,226 @@ triangles and calls at nine fixed spots. Before: medians 18, 12.5, 21 and 76 s
 with eight gaps over 25 s. After: medians 3.6, 2.9, 4.3 and 7.9 s, longest gap
 19 s, none over 25 s. Autopilot walks straight at full speed, so these are the
 floor of what a player sees, not a substitute for playing it.
+
+---
+
+# The picture, the frame and the door (November 2026)
+
+The human's brief: make it award-winning, change anything. Played first (stills
+of the whole day, title through ending), the build was complete but flat: an
+empty sky, daylight so overexposed that every pale surface sat on the tone
+curve's shoulder, a night shore of grey planes, a title screen with no title,
+and an ending shot from so far away that the door could not be seen opening.
+It could not be seen at all: the house was buried three meters in the hill.
+These rulings answer that. The story, the four rules of the dog, no wayfinding
+UI and no world text are untouched. Numbers are in
+`renders/probe/look/report.json`.
+
+## D55 — A post stack: bloom, light shafts, grade (extends D38, D39)
+
+`post.ts` is now four small passes instead of one. The scene target's alpha is
+a "solid" mask (the sky writes 0). **Bloom:** a soft-knee bright pass at half
+resolution, down five halvings and back up (four on phones), so only the sun
+on water, the moon, pale stone at noon and the windows of home glow.
+**Shafts:** the sky near the sun is marched toward the sun's place on screen at
+quarter resolution and blocked by anything solid: light through the pines at
+golden hour, the moon through them at the blue hour. **Grade:** exposure, a
+soft shoulder, a little luminance contrast, split tone, saturation, vignette,
+grain. Staged moments are letterboxed in the same pass (`uBars`). Bloom,
+shafts and exposure are per light key (`bloom`, `rays`, `exposure`), so they
+are data.
+
+## D56 — The sky is a place: clouds, a sun, a moon, stars (extends D39)
+
+One small tiling noise texture, generated at load, never loaded
+(`makeNoiseTexture`). The sky shader draws flat-bottomed two-tone clouds on a
+plane overhead, lit from the sun's side, with thin streaks near the horizon
+to hold the evening's color; a sun disc bright enough to bloom; by night a
+larger moon with its seas, a halo, more stars in two tints and a faint band
+of them. **Cloud shadows cross the land and the water** from the same field,
+which is the cheapest life in the game: the canyon floor and the beach are no
+longer one value. Cover and shadow depth are per light key (`clouds`,
+`cloudShadow`). None of it is information; none of it points at the dog.
+
+## D57 — Light is retuned for contrast, and the woods get a blue hour
+
+Daylight keys were about 1.75x albedo in sun, which put every pale surface on
+the shoulder and is why the game looked washed. Sun plus ambient now lands
+pale ground near display white and lets shade fall to a third of it, cool.
+Shade walls take bounce from sunlit ground (`uAmbGround`), so the noon town is
+pale stone and deep blue shade rather than khaki. The woods had an ember key
+and a navy key and nothing between, and interpolating them is mud: a
+**blue-hour key at 0.62** (violet horizon, indigo top) gives the middle of the
+chapter a color of its own. Low haze (`haze`, `hazeY`, `hazeFall`, `hazeDist`)
+lies on the river in the morning, among the trunks at dusk and on the sea at
+night. The moon moved to the south-west so it hangs over the water ahead of
+the walk home.
+
+## D58 — The ground is painted (amends "every polygon one flat colour", D37)
+
+Terrain and paths carry a slow wash (about 10 m) and a fine tooth near the
+eye, both from the noise texture, multiplied into the vertex color. Facets
+still take one plane of light each. Inside the town walls the ground is laid
+flagstones, drawn in the shader, faded by 60 m. Characters take a sky-light
+rim so the two of them never sink into the picture.
+
+## D59 — The camera sits lower and looks further; it rests; in town it has a boom
+
+Follow distance 6.9 m, height 3.0 m (was 7.8 and 3.8), looking 5 m ahead, 48
+degrees: the boy sits on the lower third and the sky is in the frame. **Stand
+still for a few seconds and the frame opens** (further back, wider look): the
+place gets its own look, with no button. **In the lanes** the camera is on a
+boom that stays in the street: it shortens round a corner instead of climbing
+a house (the old rise put it inside buildings at the land gate), and it drops
+to pass under covered passages and the town gates, which are exported by
+dressing as `archSpots`. **At the bolt** the camera turns to what the dog is
+staring at (nothing), and in open ground with no path it turns to the dog.
+The day opens facing up the canyon. The first move out of the title is slow.
+
+## D60 — The ending is three shots, and they go in together (supersedes D46's staging)
+
+The house stood at y 7 on ground at y 10; the lower floor, the door and the
+spill of light were underground. **A garden terrace** is cut for it (an area
+with `"walk": false`: it levels the land and is not walkable, a general flag),
+the house moved onto the gate's axis, and the garden dressed in data: a
+flagged path (`flags`), pots, and **his bowl by his own door, the same blue
+bowl the woman in the washing courtyard keeps for him.** The cut: (1) behind
+the boy, the dog at the gate under the lit house; (2) over the dog down a long
+lens, the door opens on a lit room and a figure, no face, no voice; (3) rising
+behind them as the gate swings and **the boy and the dog walk up the path
+together** into the fade. The dog still does not come to the boy: the boy
+comes to him, and only then does he fall in. Staged walking is a general
+mechanism (`script`, plan points the boy goes to in turn).
+
+## D61 — Fireflies, after the eyes
+
+Green-gold lights over the grass where the trees give out, along the back of
+the beach and in the garden (`fireflies` in a chapter's `life`; one draw,
+`fx.ts`). Never before the eyes in the woods, because two lights in the dark
+must be him, and never the window gold.
+
+## D62 — The wordmark carries the route line (amends the red rule's list)
+
+Red is still the dog's. The dotted route line now appears in three places
+instead of two, and all three are the same line: on the map, in the wordmark
+on the title and last screen, and in the loading dots and favicon. It ends in
+one dot of window gold, which is home. Nothing in the world is red; the audit
+is unchanged and passes (the UI takes the color from `COLLAR`, never a
+literal).
+
+## D63 — Presentation
+
+A title lockup (Fraunces, set large, letters rising out of their lines) over
+the live canyon, with Begin, Continue and Chapters; on a phone held upright
+the name sits in the sky and the choices at the thumb, with the two of them
+between. Three lines of small print say what a visitor needs before
+committing: sound, length, controls. Loading is paper and the line beginning,
+compositor-only so it moves while the world is built. Chapter cards carry a
+numeral and the time of day (`time` in each chapter) with the place name. The
+pause menu, the last screen (with Share), the favicon, the manifest and the
+share image are of a piece. **Fraunces is self-hosted** (`@fontsource-variable`,
+OFL): no third-party request, and the face is there on first paint. The
+controls step back during staged moments, and an idle mouse pointer hides.
+Gamepad: stick or d-pad walks, a face button whistles, Start is the menu.
+
+## D64 — What was measured
+
+Software WebGL, so frame times are not claims; counts are exact
+(`renders/probe/look/report.json` against `renders/probe/after/`). Triangles
+at the nine spots: 122k to 724k (was 118k to 725k). Draw calls: 150 to 408
+(was 121 to 337); the post stack adds about ten small passes per frame, and
+the lower camera sees more of the town on the approach (408 at ch2 0.15, was
+305). Pacing is unchanged by this session: medians 3.6, 2.9, 4.3 and 7.9 s,
+longest gap 19 s, none over 25 s. The bundle is 1.34 MB of script (394 kB
+gzipped, was 384) plus two font files of 121 and 150 kB. **None of this was run on a
+real GPU or a real phone, and none of the sound was heard.**
+
+## D65 — The first stretch of the canyon has a shape
+
+The human: "the first part of the walk is boring." Nine stills along the
+first 120 m showed why: one straight, flat, 5 m trail up the east side with
+the same two walls in every frame, and nothing underfoot until the ford 47 s
+in. **Ruling, all of it data plus one general prop kind:** the trail now comes
+down to the river's edge and runs along the water, turns east to face a
+**waterfall** off the shaded wall (`waterfall` in `props`: a ribbon laid on
+whatever face is there, `fallsMaterial`), and wades the **brook** it feeds (a
+new river in `world.json`, so the map draws it too) before turning north
+again. The camera follows the trail's tangent, so each bend is a new picture.
+The dog's stops are restaged on it: nose in the wrack at the river's edge,
+waiting on the bend with the falls behind him, a drink from the brook, across,
+and a shake on the far side; after the ford he now rolls dry instead of
+shaking twice. The wait before the bolt is 26 s, was 34. On autopilot the
+first thing underfoot now comes at 24 s (brush) and 30 s (the brook), was 22 s
+and 47 s; chapter median gap 2.3 s (was 3.6), longest 11 s, the chapter is
+3.6 s longer. The waterfall is a cascade down a 50 degree slope, not a plunge:
+the wall is not steep enough there for one.
+
+---
+
+# The first playtest by hand (November 2026)
+
+The human played the build and filed six things. Two were blockers. All six
+are answered here; `node tools/play.mjs <dir>` drives the game through each of
+them and prints what happened.
+
+## D66 — Walking is relative to what is on screen (fixes "stuck at the top of the hill")
+
+At the canyon rim a framed camera takes the picture, and the controls were
+still steering relative to the follow camera the player could no longer see.
+Forward was not forward. **Ruling:** movement is always relative to the camera
+as drawn (`viewYaw`, taken from the camera each frame), for the follow camera,
+its swing on cliff paths, framed shots and look-around alike.
+
+## D67 — A chapter can end on a picture (the rim)
+
+The canyon ended at a 7 m circle on the plateau that nothing pointed to. A
+framed camera may now carry `exit` (seconds): reaching it is a staged moment,
+letterboxed, controls off, the shot held and pushed in a little toward where
+the dog went, and then the chapter ends. The canyon's last shot is the town
+below with the dog on the path down, looking back, held 7 s, then the map.
+Nothing to find.
+
+## D68 — He can look around, and leave the path (amends D44; the human asked)
+
+**Look:** drag with the mouse, Q and E, the right stick, or a finger that
+starts in the upper 40 percent of a touchscreen (the rest still walks, so it
+is still one thumb). It is an offset on the follow camera that eases back
+behind him once he walks on, or after nine seconds standing. **Roam:** a
+chapter may set `roam` (meters): open ground that near its routes is
+walkable where the land allows, which means not a steep face, not water over
+0.45 m, not the sea, not inside the town walls, not a terrace kept for a
+staged moment. Canyon 15, woods 14, shore 12, town none (its lanes are its
+shape). The log, the plank and the fords are still the only ways over what
+they cross. Off the path the camera turns to the dog, which is the
+wayfinding. **Not built:** trees and boulders do not stop him.
+
+## D69 — The whistle answers where you can see it, and teaches itself
+
+"I don't understand the point of the whistle." It had no visible answer
+beyond birds, and nothing ever suggested pressing it. Now the answer draws
+rings on the ground where it came from, sized to be seen from where the boy
+stands, and **the view turns to it** for three seconds; in the town's false
+corners the view turns to the echo, so the whistle misleads the eye as well
+as the ear. And the button glows, with its key beside it, a few seconds after
+the dog first bolts and whenever he has been out of sight a while, three
+times at most. No text, no marker: the hint is on the control, not the world.
+
+## D70 — The day opens on the two of them (amends "no cutscene", story.md)
+
+"There should be some emotion" before being thrown in. Nine seconds, two
+shots, wordless, skippable with any input: close on the boy kneeling to the
+dog at the water's edge, the dog looking up at him; then the dog's play-bow
+and bounce with the canyon behind them; then the camera goes round behind
+him, the place name comes up, and the morning is the player's. The dog can
+be held for a staged moment (`DogActor.stage`), which is general. It shows
+what is about to be lost, which is all the setup this story needs; it says
+nothing about why he bolts.
+
+## D71 — Small things that were wrong
+
+The fallen pine sat 0.55 m higher than the route across it, so he walked
+through its middle: the log now lies with its top at the route's height and
+along it. The brush he pushes through was a patch of fat dark cones that
+shoved a meter and a half aside; it is tall pale grass and broom now. Ground
+tufts are fine blades the color of dry ground, bushes barely stir and barely
+give (`push` on the material), and the wind on low growth is roughly halved.

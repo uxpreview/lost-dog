@@ -10,6 +10,7 @@
     "red-audit": "node tools/red-audit.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
     "@react-three/fiber": "^9.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

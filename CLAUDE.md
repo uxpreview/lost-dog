@@ -23,8 +23,10 @@ Read these before writing code. They outrank your own judgment.
 ## Laws of the project
 
 **Red belongs to the dog.** No red anywhere in the game except the collar and
-the route line on the map. This is enforced by an automated audit and it is not
-negotiable at any prop, texture or lighting level.
+the dotted route line (on the map, and in the wordmark, which is the same
+line; see D62). This is enforced by an automated audit and it is not
+negotiable at any prop, texture or lighting level. UI takes the color from
+`COLLAR` in `palette.ts`, never a literal.
 
 **The dog is never in peril.** No system in this game can harm him, and no
 moment may imply harm. He waits at danger until the boy is through. He looks
@@ -54,13 +56,17 @@ gate.
 **Report actual numbers.** At performance gates, measure. Never assert.
 
 **Ask before adding a verb.** The game is walk, whistle, and a rare context
-action. A fourth verb is a design change requiring the human.
+action. A fourth verb is a design change requiring the human. (Looking around
+was asked for by the human and is a camera offset, not a verb; see D68.)
 
 ## Stack
 
 Vite, React Three Fiber (as a canvas host; the engine is plain three.js),
 Zustand for UI state, deployed to Vercel as a standalone app. No asset files:
-every mesh, color and sound is generated at runtime from code and data.
+every mesh, color and sound is generated at runtime from code and data. The
+exceptions are presentation, not world: the display face (Fraunces, self-hosted
+from `@fontsource-variable/fraunces`) and the share image and icons in
+`public/`, which `tools/social.mjs` renders from the game itself.
 
 ## Where things live
 
@@ -69,14 +75,21 @@ every mesh, color and sound is generated at runtime from code and data.
 | The coast itself: coastline, hills, the canyon, rivers, the road | `src/data/world.json` |
 | A chapter: its route, the dog's stops, light by progress, townsfolk, framed shots | `src/data/ch1.json` .. `ch4.json` |
 | Every color in the world | `src/engine/palette.ts` |
-| How light and fog look | `src/engine/materials.ts` (shader), plus `lighting` in each chapter |
+| How light, fog, haze, clouds and their shadows look | `src/engine/materials.ts` (shaders), plus `lighting` in each chapter (`clouds`, `haze`, `rays`, `bloom`, `exposure` are per key) |
+| Bloom, light shafts, the grade, letterbox bars | `src/engine/post.ts`; the per-chapter grade is `grades` in `game.ts` |
+| The sky: clouds, sun, moon, stars | the sky shader in `src/engine/materials.ts` |
 | What the dog does at each node type, and his asides | `src/engine/dog.ts` |
 | Critters, small effects (dust, drops, water rings) | `src/engine/life.ts`, plus `life` in each chapter |
 | The town's ambient people and their idles | `ambient` in `ch2.json`; idles in `src/engine/characters.ts` |
 | Props (pines, houses, boats, the bell tower) | `src/engine/kit.ts` |
 | Where trees, ground cover and houses get placed | `src/engine/dress.ts` |
-| Camera, whistle, chapter flow, the ending | `src/engine/game.ts` |
-| Title, cards, legend, touch controls, menu | `src/hud/Hud.tsx`, `src/hud/hud.css` |
+| Camera (follow, look-around, rest, the town boom), whistle, chapter flow | `src/engine/game.ts` (`updateCamera`, `answer`) |
+| How far off the routes he can wander | `roam` in each chapter; the rules are `roamable` in `src/engine/world.ts` |
+| The opening scene, a chapter's closing shot | `updateCut` in `src/engine/game.ts` (`intro`, `vista`); a camera with `exit` in the chapter |
+| The ending's three shots and the walk in | `updateCut` in `src/engine/game.ts`; the garden is data in `ch4.json` |
+| Fireflies | `fireflies` in a chapter's `life`; drawn by `src/engine/fx.ts` |
+| Title, loading, cards, legend, touch controls, menu, last screen | `src/hud/Hud.tsx`, `src/hud/hud.css` |
+| Page title, description, share tags | `index.html`; `public/site.webmanifest` |
 | The end-of-chapter map | `src/hud/MapScreen.tsx` |
 | Sound | `src/engine/audio.ts` |
 
@@ -100,6 +113,21 @@ chapter began. `node tools/probe.mjs all <label>` (dev server running) runs
 autopilot through every chapter, reports those gaps, takes one screenshot per
 chapter at desktop and portrait into `renders/probe/<label>/`, and counts
 triangles and draw calls at nine fixed spots.
+Stills, all with the dev server running:
+
+- `node tools/shots.mjs <dir> title 0:0.3 2:0.6:p ...` one still per spec
+  (`chapter:progress`, `:p` for portrait).
+- `node tools/ui.mjs <dir>` title, chapters, card, legend and menu, desktop
+  and phone.
+- `node tools/opening.mjs <dir>` the first half minute, played from the title.
+- `node tools/ending.mjs <dir> [p]` the three shots at the gate, the map, the
+  last screen.
+- `node tools/play.mjs <dir>` the things a hand finds: the opening scene, the
+  whistle, looking around, off the path, the log, the rim.
+- `node tools/peek.mjs '<js>' [ch]` ask the running game a question.
+- `node tools/social.mjs` re-render `public/og.jpg` and the icons after the
+  title changes.
+
 `npm run red-audit` must pass before any push. `npm run build` must pass.
 
 ## Working rhythm
