@@ -98,6 +98,7 @@ const VERT = /* glsl */ `
 uniform float uTime;
 uniform float uWind;
 uniform float uWindBase;
+uniform float uPushAmt;
 uniform vec4 uPush;
 #ifdef USE_HANG
 attribute float aHang;
@@ -139,7 +140,7 @@ void main() {
         float r = i == 0 ? 1.5 : 1.0;
         push += (l > 0.001 ? d / l : vec2(0.0)) * smoothstep(r, 0.2, l) * (i == 0 ? 0.9 : 0.6);
       }
-      vec3 wd = vec3(push.x, -length(push) * 0.35, push.y) * min(hgt, 1.6);
+      vec3 wd = vec3(push.x, -length(push) * 0.35, push.y) * min(hgt, 1.6) * uPushAmt;
       // back into the instance's own frame (uniform scale: R^T d / s)
       float sc2 = dot(im[0], im[0]);
       transformed += (transpose(im) * wd) / max(sc2, 1e-4);
@@ -273,6 +274,8 @@ export interface WorldMatOpts {
   wind?: number
   /** height above which things sway: trees 1.2 m, grass and brush 0 (and they part) */
   windBase?: number
+  /** how far low growth leans away from whoever walks through it (grass 1, bushes much less) */
+  push?: number
   /** washing: vertices flap by their aHang attribute */
   hang?: boolean
   smooth?: boolean
@@ -305,6 +308,7 @@ export function worldMaterial(o: WorldMatOpts = {}) {
         uOpacity: { value: o.opacity ?? 1 },
         uWind: { value: o.wind ?? 0 },
         uWindBase: { value: o.windBase ?? 1.2 },
+        uPushAmt: { value: o.push ?? 1 },
       },
     ]),
     vertexShader: VERT,

@@ -51,7 +51,9 @@ export function dress(w: World, quality: number): THREE.Group {
   const matTree = worldMaterial({ vertexColors: true, wind: 1 })
   const matStatic = worldMaterial({ vertexColors: true })
   // low growth moves in the air and parts for the boy and the dog
-  const matLow = worldMaterial({ vertexColors: true, wind: 7, windBase: 0 })
+  // grass and reeds stir and part; bushes are stiff, and only give a little
+  const matLow = worldMaterial({ vertexColors: true, wind: 4, windBase: 0 })
+  const matBush = worldMaterial({ vertexColors: true, wind: 1.2, windBase: 0, push: 0.22 })
 
   const variants: Record<string, { geo: THREE.BufferGeometry; shadow: boolean; mat: THREE.Material; low?: THREE.BufferGeometry }> = {}
   const vr = rng(99)
@@ -62,8 +64,8 @@ export function dress(w: World, quality: number): THREE.Group {
   }
   for (let i = 0; i < 2; i++) variants['cypress' + i] = { geo: K.cypress(vr), shadow: true, mat: matTree }
   for (let i = 0; i < 2; i++) variants['olive' + i] = { geo: K.olive(vr), shadow: true, mat: matTree }
-  for (let i = 0; i < 3; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matLow }
-  for (let i = 0; i < 1; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matLow }
+  for (let i = 0; i < 3; i++) variants['shrub' + i] = { geo: K.shrub(vr, i % 2 ? PAL.maquis : PAL.olive), shadow: false, mat: matBush }
+  for (let i = 0; i < 1; i++) variants['grass' + i] = { geo: K.shrub(vr, PAL.duneGrass), shadow: false, mat: matBush }
   for (let i = 0; i < 2; i++) variants['rock' + i] = { geo: K.rock(vr, i % 2 ? PAL.limeA : PAL.rockGrey), shadow: false, mat: matStatic }
   for (let i = 0; i < 2; i++) variants['fig' + i] = { geo: K.fig(vr), shadow: true, mat: matTree }
   for (let i = 0; i < 2; i++) variants['carob' + i] = { geo: K.carob(vr), shadow: true, mat: matTree }

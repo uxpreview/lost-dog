@@ -5,6 +5,7 @@
   "bed": "shore",
   "walkSpeed": 2.7,
   "gait": "calm",
+  "roam": 12,
   "surface": "sand",
   "prints": true,
   "whistle": "companion",

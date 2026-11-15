@@ -443,7 +443,17 @@ body.no-cursor * {
   opacity: 0.26;
 }
 .whistle-btn.hint {
-  animation: pulse 1.8s var(--ease) infinite;
+  opacity: 1 !important;
+  background: rgba(255, 248, 234, 0.3) !important;
+  animation: pulse 1.6s var(--ease) infinite;
+}
+.whistle-key {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 50%;
+  margin-top: -13px;
+  background: rgba(30, 24, 18, 0.3);
+  animation: fade-in 0.6s var(--ease) both;
 }
 .menu-btn {
   position: absolute;
@@ -767,6 +777,12 @@ kbd.wide {
   }
 }
 @media (max-width: 560px) {
+  .legend {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px !important;
+    white-space: normal;
+  }
   .lockup h1 {
     font-size: clamp(52px, 17.5vw, 88px);
   }

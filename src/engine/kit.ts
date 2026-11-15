@@ -412,10 +412,16 @@ export function reedBed(radius: number, n: number, r: R, ground: (x: number, z: 
       k.add(cone(3), r() < 0.5 ? PAL.duneGrass : PAL.floorGrass, T(x, y, z, (r() - 0.5) * 0.2, r() * 3, (r() - 0.5) * 0.2, 0.09, h, 0.09), { tone: 0.85 + r() * 0.25 })
       if (r() < 0.35) k.add(cyl(4), PAL.pineTrunk, T(x, y + h * 0.78, z, 0, 0, 0, 0.07, 0.22, 0.07), { tone: 1.1 })
     } else {
-      const h = 0.7 + r() * 0.6
-      const w = 0.35 + r() * 0.3
-      k.add(cone(4), r() < 0.5 ? PAL.maquis : PAL.maquisDark, T(x, y, z, 0, r() * 3, 0, w, h, w), { tone: 0.85 + r() * 0.25 })
-      if (r() < 0.25) k.add(ico(0), PAL.awningOchre, T(x, y + h * 0.8, z, 0, 0, 0, 0.12, 0.1, 0.12), { tone: 1 })
+      // tall grass and broom: a fan of thin stems from one root, pale, a few in yellow flower
+      const stems = 4 + Math.floor(r() * 3)
+      for (let j = 0; j < stems; j++) {
+        const h = 0.55 + r() * 0.55
+        const an = r() * Math.PI * 2
+        const lean = 0.12 + r() * 0.3
+        const col = j % 3 === 0 ? PAL.maquis : r() < 0.5 ? PAL.floorGrass : PAL.duneGrass
+        k.add(cone(3), col, T(x + Math.cos(an) * 0.08, y, z + Math.sin(an) * 0.08, Math.cos(an) * lean, r() * 3, -Math.sin(an) * lean, 0.07, h, 0.07), { tone: 0.95 + r() * 0.25 })
+        if (r() < 0.14) k.add(ico(0), PAL.flowerYellow, T(x + Math.cos(an) * (0.08 + lean * h * 0.8), y + h * 0.9, z + Math.sin(an) * (0.08 + lean * h * 0.8), 0, 0, 0, 0.1, 0.09, 0.1), { tone: 1 })
+      }
     }
   }
   return k.build()
@@ -694,11 +700,14 @@ export function heldBroom() {
 
 /** A tuft of grass: a few blades. */
 export function tuft(r: R, col = PAL.floorGrass) {
+  // fine blades fanning from one root, most of them the color of the dry ground
   const k = new Kit()
-  const n = 4 + Math.floor(r() * 3)
+  const n = 7 + Math.floor(r() * 4)
   for (let i = 0; i < n; i++) {
-    const h = 0.25 + r() * 0.35
-    k.add(cone(3), i % 2 ? col : PAL.maquis, T((r() - 0.5) * 0.3, 0, (r() - 0.5) * 0.3, (r() - 0.5) * 0.5, r() * 3, (r() - 0.5) * 0.5, 0.06, h, 0.06), { tone: 0.85 + r() * 0.3 })
+    const h = 0.14 + r() * 0.26
+    const lean = 0.25 + r() * 0.5
+    const a = r() * Math.PI * 2
+    k.add(cone(3), i % 4 === 0 ? PAL.maquis : col, T(Math.cos(a) * 0.05, 0, Math.sin(a) * 0.05, Math.cos(a) * lean, r() * 3, -Math.sin(a) * lean, 0.03, h, 0.03), { tone: 1.0 + r() * 0.25 })
   }
   return k.build()
 }

@@ -56,7 +56,8 @@ gate.
 **Report actual numbers.** At performance gates, measure. Never assert.
 
 **Ask before adding a verb.** The game is walk, whistle, and a rare context
-action. A fourth verb is a design change requiring the human.
+action. A fourth verb is a design change requiring the human. (Looking around
+was asked for by the human and is a camera offset, not a verb; see D68.)
 
 ## Stack
 
@@ -82,7 +83,9 @@ from `@fontsource-variable/fraunces`) and the share image and icons in
 | The town's ambient people and their idles | `ambient` in `ch2.json`; idles in `src/engine/characters.ts` |
 | Props (pines, houses, boats, the bell tower) | `src/engine/kit.ts` |
 | Where trees, ground cover and houses get placed | `src/engine/dress.ts` |
-| Camera (follow, rest, the town boom), whistle, chapter flow | `src/engine/game.ts` (`updateCamera`) |
+| Camera (follow, look-around, rest, the town boom), whistle, chapter flow | `src/engine/game.ts` (`updateCamera`, `answer`) |
+| How far off the routes he can wander | `roam` in each chapter; the rules are `roamable` in `src/engine/world.ts` |
+| The opening scene, a chapter's closing shot | `updateCut` in `src/engine/game.ts` (`intro`, `vista`); a camera with `exit` in the chapter |
 | The ending's three shots and the walk in | `updateCut` in `src/engine/game.ts`; the garden is data in `ch4.json` |
 | Fireflies | `fireflies` in a chapter's `life`; drawn by `src/engine/fx.ts` |
 | Title, loading, cards, legend, touch controls, menu, last screen | `src/hud/Hud.tsx`, `src/hud/hud.css` |
@@ -119,6 +122,8 @@ Stills, all with the dev server running:
 - `node tools/opening.mjs <dir>` the first half minute, played from the title.
 - `node tools/ending.mjs <dir> [p]` the three shots at the gate, the map, the
   last screen.
+- `node tools/play.mjs <dir>` the things a hand finds: the opening scene, the
+  whistle, looking around, off the path, the log, the rim.
 - `node tools/peek.mjs '<js>' [ch]` ask the running game a question.
 - `node tools/social.mjs` re-render `public/og.jpg` and the icons after the
   title changes.

@@ -42,6 +42,11 @@ Judge, in this order:
 
 ## 2. Known weak spots
 
+- **Roaming has no obstacles** (D68). He can walk through tree trunks and
+  boulders off the path. Dressing knows where they are; the world does not.
+- **The opening's close shot shows how simple the two models are** (D70). It
+  reads as a boy crouching to his dog; a better dog would make it land.
+
 - **The waterfall is a chute, not a plunge** (D65). The east wall is about 50
   degrees where it comes down. A steeper notch in the wall there (a `soften`
   in reverse on the canyon valley, or a short dry side valley) would let it

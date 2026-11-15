@@ -69,7 +69,7 @@ interface NodeRt {
   done: boolean
 }
 
-type Mode = 'heel' | 'stare' | 'run' | 'pause' | 'wait' | 'extra' | 'nearmiss' | 'escape' | 'vista' | 'companion' | 'home' | 'aside'
+type Mode = 'staged' | 'heel' | 'stare' | 'run' | 'pause' | 'wait' | 'extra' | 'nearmiss' | 'escape' | 'vista' | 'companion' | 'home' | 'aside'
 
 const isAside = (n: DogNode) => n.type === 'business' || n.type === 'invite' || n.type === 'double-back'
 
@@ -89,6 +89,23 @@ export class DogActor {
   lat = 0
   speed = 0
   gait: DogGait = 'stand'
+  private stagedPose: DogGait = 'sit'
+  private stagedFrom: Mode = 'heel'
+  /** Hold him at a spot for a staged moment (the opening), or let him go again with `null`. */
+  stage(at: { x: number; z: number; yaw: number; pose: DogGait } | null) {
+    if (at) {
+      if (this.mode !== 'staged') this.stagedFrom = this.mode
+      this.mode = 'staged'
+      this.x = at.x
+      this.z = at.z
+      this.yaw = at.yaw
+      this.stagedPose = at.pose
+      this.speed = 0
+    } else if (this.mode === 'staged') {
+      this.mode = this.stagedFrom
+      this.t = 0
+    }
+  }
   /** the ending: he walks in at the boy's side (set by the game once the boy has come to him) */
   homeWith = false
   mode: Mode = 'heel'
@@ -201,6 +218,14 @@ export class DogActor {
     this.excite = damp(this.excite, dBoy < 6 ? 0.8 : 0.35, 1.5, dt)
 
     switch (this.mode) {
+      case 'staged': {
+        // a staged moment holds him where he was put, facing the boy
+        pose = this.stagedPose
+        faceBoy = true
+        lookAtBoy = true
+        this.excite = 1
+        break
+      }
       case 'heel':
       case 'companion': {
         // beside the boy, a little ahead, on his right

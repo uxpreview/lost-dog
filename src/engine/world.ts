@@ -292,7 +292,42 @@ export class World {
   }
 
   walkable(x: number, z: number, ci: ChapterSel) {
-    return !!this.corridor(x, z, ci) || !!this.areaAt(x, z, ci)
+    return !!this.corridor(x, z, ci) || !!this.areaAt(x, z, ci) || this.roamable(x, z, ci)
+  }
+
+  /**
+   * Off the routes: open ground near them that a boy could cross. Not a steep
+   * face, not deep water, not the sea, not inside a town's walls, not a
+   * terrace kept for a staged moment. Chapters opt in with `roam` (meters).
+   */
+  roamable(x: number, z: number, ci: ChapterSel) {
+    let near = false
+    for (const w of this.walks) {
+      if (!inSel(w.chapter, ci)) continue
+      const roam = this.chapters[w.chapter].roam ?? 0
+      if (roam <= 0 || w.bridge) continue
+      const line = w.line
+      if (x < line.minX - roam - 4 || x > line.maxX + roam + 4 || z < line.minZ - roam - 4 || z > line.maxZ + roam + 4) continue
+      const n = line.nearest(x, z, roam + 4)
+      if (n && n.d < roam + line.e(1, n.s) * 0.5) {
+        near = true
+        break
+      }
+    }
+    if (!near) return false
+    const g = this.ground(x, z)
+    if (g < 0.25) return false
+    const e = 1.1
+    const steep = Math.max(Math.abs(this.ground(x + e, z) - this.ground(x - e, z)), Math.abs(this.ground(x, z + e) - this.ground(x, z - e))) / (2 * e)
+    if (steep > 0.7) return false
+    const wy = this.waterY(x, z)
+    if (wy !== null && wy - g > 0.45) return false
+    for (const a of this.areas) {
+      if (a.walk !== false) continue
+      if (a.poly ? inPoly(x, z, a.poly) || polyEdgeDist(x, z, a.poly) < 1.2 : a.circle ? Math.hypot(x - a.circle[0], z - a.circle[1]) < a.circle[2] + 1.2 : false) return false
+    }
+    for (const c of this.chapters) if (c.town && Math.hypot(x - c.town.center[0], z - c.town.center[1]) < c.town.radius * 1.04) return false
+    return true
   }
 
   /** Where the boy's feet go at (x, z). */
@@ -320,6 +355,7 @@ export class World {
     }
     const a = this.areaAt(x, z, ci)
     if (a) return a.surface
+    if (this.inWater(x, z)) return 'water'
     return ch.surface
   }
 

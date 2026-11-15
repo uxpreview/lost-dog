@@ -123,6 +123,19 @@ export class Game {
   camFov = 50
   frameW = 0
   camSwing = 0
+  /** the way the camera actually faces on the ground: walking is always relative to what is on screen */
+  viewYaw = 0
+  /** looking around: an offset from where the camera would sit, eased back once he walks on */
+  lookYaw = 0
+  lookPitch = 0
+  private lookIdle = 99
+  /** the whistle's answer turns the view to where it came from, for a moment */
+  private answerLook = 0
+  private answerAt: [number, number] = [0, 0]
+  private lastWhistleT = -99
+  private boltAt = -99
+  private hintsLeft = 3
+  private cutDef: NonNullable<Chapter['cameras']>[number] | null = null
   private restT = 0
   private rest = 0
   /** seconds since the title let go: the first move into the day is a slow one */
@@ -600,9 +613,15 @@ export class Game {
     audio.setBed(this.ch.bed, 3)
     this.mode = 'play'
     this.sinceBegin = 0
-    this.showCard()
     const ui = useUI.getState()
-    ui.set({ screen: 'play', legend: this.ci === 0 })
+    if (this.ci === 0) {
+      // the day opens on the two of them before it is handed over
+      ui.set({ screen: 'play', legend: false })
+      this.startCut('intro')
+      return
+    }
+    this.showCard()
+    ui.set({ screen: 'play', legend: false })
   }
 
   /** From the menu. */
@@ -831,8 +850,8 @@ export class Game {
     if (mx || mz) {
       if (useUI.getState().legend) useUI.getState().set({ legend: false })
     }
-    const cy = Math.cos(this.camYaw)
-    const sy = Math.sin(this.camYaw)
+    const cy = Math.cos(this.viewYaw)
+    const sy = Math.sin(this.viewYaw)
     // forward is the camera's view direction on the ground
     // camera right on the ground is (-cos, sin) for a camera facing (sin, cos)
     let wx = -mx * cy + mz * sy
@@ -948,6 +967,12 @@ export class Game {
     this.unseenT = seen ? 0 : this.unseenT + dt
     const ahead = this.dog.s > this.boyS + 4 && this.dog.mode !== 'companion' && this.dog.mode !== 'heel'
     this.surge = damp(this.surge, this.unseenT > 0.8 && ahead ? 1.12 : 1, 1.2, dt)
+    // The whistle teaches itself: it glows when he has just run off, and when
+    // he has been out of sight a while, a few times, until it has been used.
+    const justBolted = this.time > this.boltAt + 3.5 && this.time < this.boltAt + 18 && this.lastWhistleT < this.boltAt
+    const lost = ahead && this.unseenT > 5 && this.time - this.lastWhistleT > 12
+    const hint = this.mode === 'play' && this.hintsLeft > 0 && this.whistleCool <= 0 && (justBolted || lost)
+    if (useUI.getState().whistleHint !== hint) useUI.getState().set({ whistleHint: hint })
 
     // the dog
     this.dog.update(dt, this.dogCtx())
@@ -957,7 +982,15 @@ export class Game {
     this.updateCut(dt)
 
     // chapter exit
-    if (this.mode === 'play' && ch.exit) {
+    const staged = ch.cameras?.find((c) => c.exit)
+    if (this.mode === 'play' && staged) {
+      // the chapter ends on a picture, not on a spot to be found
+      const [sx, sz, sr] = staged.trigger
+      if (Math.hypot(this.px - sx, this.pz - sz) < sr) {
+        this.cutDef = staged
+        this.startCut('vista')
+      }
+    } else if (this.mode === 'play' && ch.exit) {
       const [ex, ez, er] = ch.exit
       if (Math.hypot(this.px - ex, this.pz - ez) < er) this.endChapter()
     }
@@ -1070,6 +1103,7 @@ export class Game {
           break
         }
         case 'bolt':
+          this.boltAt = this.time
           audio.stinger('bolt')
           this.beat('dog:bolt', this.dog.x, this.dog.z)
           break
@@ -1187,6 +1221,8 @@ export class Game {
     if (this.whistleCool > 0) return
     this.whistleCool = 3
     this.whistles++
+    if (useUI.getState().whistleHint) this.hintsLeft--
+    this.lastWhistleT = this.time
     this.boy.setPose('whistle', 0.9)
     audio.whistle()
     this.rings.emit(this.px, this.py, this.pz, 0.1)
@@ -1199,6 +1235,17 @@ export class Game {
   private answer() {
     const ch = this.ch
     const c = this.dogCtx()
+    /** The world answers where you can see it: rings on the ground there, and the view turns to it. */
+    const show = (x: number, y: number, z: number) => {
+      const d = Math.hypot(x - this.px, z - this.pz)
+      const size = clamp(1 + d / 14, 1, 5)
+      this.rings.emit(x, y, z, 0, size)
+      this.rings.emit(x, y, z, 0.28, size)
+      this.rings.emit(x, y, z, 0.56, size)
+      this.answerAt = [x, z]
+      this.answerLook = 3.2
+      this.lookIdle = 99
+    }
     // in the stone town, some corners send the bark back from the wrong way
     if (ch.whistle === 'misleading') {
       for (const fs of ch.falseSources ?? []) {
@@ -1208,6 +1255,7 @@ export class Game {
           audio.bark(ax, ay, az, { echo: true })
           this.birds.lift(ax, ay, az, 'pigeons', 11)
           audio.birds(ax, ay, az, 'pigeons')
+          show(ax, this.world.standY(ax, az, -1), az)
           return
         }
       }
@@ -1217,9 +1265,11 @@ export class Game {
     if (r === 'lookup') return
     if (r === 'bounce') {
       audio.bark(x, y, z, { double: true })
+      this.rings.emit(x, y, z, 0, 0.8)
       return
     }
     audio.bark(x, y, z, { echo: ch.whistle === 'misleading' })
+    show(x, y, z)
     const kind = ch.bed === 'town' ? 'pigeons' : ch.bed === 'shore' ? 'gulls' : 'small'
     if (this.darkness < 0.55) {
       this.birds.lift(x, y + 2, z, kind, 11, new THREE.Vector3(this.px, 0, this.pz))
@@ -1229,11 +1279,11 @@ export class Game {
 
   // ------------------------------------------------------------------ staged moments
 
-  private startCut(kind: 'collar' | 'home') {
+  private startCut(kind: 'collar' | 'home' | 'vista' | 'intro') {
     this.cutKind = kind
     this.cutT = 0
     this.mode = kind === 'home' ? 'end' : 'cut'
-    clearKeys()
+    if (kind !== 'intro') clearKeys()
     if (kind === 'collar') audio.stinger('nearmiss')
     if (kind === 'home') audio.stinger('home')
   }
@@ -1242,6 +1292,66 @@ export class Game {
     if (this.cutKind === '') return
     this.cutT += dt / Math.max(this.timeScale, 0.001)
     const t = this.cutT
+    if (this.cutKind === 'vista' && this.cutDef) {
+      // the chapter's last picture: held, pushing in a little toward where he went
+      const c = this.cutDef
+      const k = smoothstep(0, c.exit ?? 6, t) * 0.07
+      const pos = new THREE.Vector3(...c.position)
+      const look = new THREE.Vector3(...c.lookAt)
+      this.cutCam = { pos: pos.clone().lerp(look, k), look, fov: c.fov ?? 45 }
+      if (t > (c.exit ?? 6)) {
+        this.cutKind = ''
+        this.cutDef = null
+        this.mode = 'play'
+        this.endChapter()
+      }
+      return
+    }
+    if (this.cutKind === 'intro') {
+      // Before the day: the two of them at the water. He kneels to the dog, the
+      // dog asks him to play, and then it is an ordinary morning and yours.
+      const fx = Math.sin(this.pyaw)
+      const fz = Math.cos(this.pyaw)
+      const rx = -fz
+      const rz = fx
+      if (t < 0.05) this.dog.stage({ x: this.px + fx * 0.82, z: this.pz + fz * 0.82, yaw: this.pyaw + Math.PI, pose: 'sit' })
+      if (t > 0.8 && (input.whistle || input.move.x !== 0 || input.move.z !== 0)) this.cutT = Math.max(this.cutT, 8.6)
+      input.whistle = false
+      const shot = t < 4.7 ? 0 : t < 8.6 ? 1 : 2
+      if (shot !== this.cutShot) {
+        this.cutShot = shot
+        this.snapCamera = true
+      }
+      const at = (f: number, r: number, u: number) => new THREE.Vector3(this.px + fx * f + rx * r, this.py + u, this.pz + fz * f + rz * r)
+      if (shot === 0) {
+        const k = t / 4.7
+        if (t > 0.3 && t < 4.3) this.boy.setPose('kneel', 0.3)
+        if (t > 1.6 && t - dt <= 1.6) this.dog.rig.play('lookup', 2.2)
+        this.cutCam = { pos: at(0.9, 3.5 - k * 0.35, 0.85), look: at(0.42, 0, 0.62), fov: 32 }
+      } else if (shot === 1) {
+        const k = (t - 4.7) / 3.9
+        if (t > 4.9 && t - dt <= 4.9) {
+          this.dog.stage({ x: this.dog.x, z: this.dog.z, yaw: this.dog.yaw, pose: 'stand' })
+          this.dog.rig.play('bow', 1.2)
+        }
+        if (t > 6.3 && t - dt <= 6.3) {
+          this.dog.rig.play('bounce', 0.9)
+          audio.bark(this.dog.x, this.dog.y, this.dog.z, { double: true })
+        }
+        this.cutCam = { pos: at(4.6 - k * 0.4, -1.9, 1.15), look: at(0.5, 0, 0.72), fov: 36 }
+      } else {
+        // and the day is his: the camera goes round behind him, facing up the canyon
+        this.cutCam = null
+        this.cutKind = ''
+        this.cutShot = -1
+        this.dog.stage(null)
+        this.mode = 'play'
+        this.sinceBegin = 0
+        this.showCard()
+        useUI.getState().set({ legend: true })
+      }
+      return
+    }
     if (this.cutKind === 'collar') {
       // the reach, the collar under his fingers, and gone
       this.boy.setPose('reach', 0.2)
@@ -1474,11 +1584,38 @@ export class Game {
           tz = (this.dog.z - this.pz) / l
         }
       }
+      // the whistle's answer: the view turns to where it came from
+      if (this.answerLook > 0) {
+        this.answerLook -= dt
+        const l = Math.hypot(this.answerAt[0] - this.px, this.answerAt[1] - this.pz)
+        if (l > 6) {
+          tx = (this.answerAt[0] - this.px) / l
+          tz = (this.answerAt[1] - this.pz) / l
+          turn = 3.2
+        }
+      }
       const pathYaw = Math.atan2(tx, tz)
       const moveYaw = this.pspeed > 0.5 ? Math.atan2(this.pvx, this.pvz) : pathYaw
       const want = pathYaw + clamp(angleDiff(pathYaw, moveYaw), -0.5, 0.5) * 0.4
       this.camYaw = dampAngle(this.camYaw, want, this.snapCamera ? 100 : turn, dt)
       const town = this.ch.bed === 'town'
+      // looking around: a drag, Q and E, or the right stick. It is an offset on
+      // the follow camera, and it comes back behind him once he walks on.
+      const dYaw = input.look.x + input.lookRate.x * 1.9 * dt
+      const dPitch = input.look.y + input.lookRate.y * 1.2 * dt
+      input.look.x = 0
+      input.look.y = 0
+      if (this.mode === 'play' && (dYaw !== 0 || dPitch !== 0)) {
+        this.lookYaw -= dYaw
+        this.lookPitch = clamp(this.lookPitch + dPitch, -0.45, 0.7)
+        this.lookIdle = 0
+      } else this.lookIdle += dt
+      if (this.mode !== 'play' || (this.pspeed > 0.6 ? this.lookIdle > 1.2 : this.lookIdle > 9)) {
+        this.lookYaw = damp(this.lookYaw, 0, 1.3, dt)
+        this.lookPitch = damp(this.lookPitch, 0, 1.3, dt)
+      }
+      if (this.lookYaw > Math.PI) this.lookYaw -= Math.PI * 2
+      if (this.lookYaw < -Math.PI) this.lookYaw += Math.PI * 2
       // stand still a while and the frame opens: the place gets its own look
       const still = this.mode === 'play' && this.pspeed < 0.15 && !useUI.getState().paused
       this.restT = still ? this.restT + dt : 0
@@ -1534,7 +1671,7 @@ export class Game {
           }
         }
         this.camSwing = dampAngle(this.camSwing, angleDiff(this.camYaw, bestYaw), 1.5, dt)
-        const sw = this.camYaw + this.camSwing
+        const sw = this.camYaw + this.camSwing + this.lookYaw
         let under = 0
         for (const a of archSpots) under = Math.max(under, smoothstep(9.5, 5.5, Math.hypot(a.x - this.px, a.z - this.pz)))
         const wantBoom = clamp(Math.min(reach(sw), lerp(dist, 4.6, under)), 2.4, dist)
@@ -1558,13 +1695,19 @@ export class Game {
           }
         }
         this.camSwing = dampAngle(this.camSwing, angleDiff(this.camYaw, bestYaw), 1.5, dt)
-        const sw = this.camYaw + this.camSwing
+        const sw = this.camYaw + this.camSwing + this.lookYaw
         wantPos = new THREE.Vector3(this.px - Math.sin(sw) * dist, this.py + height, this.pz - Math.cos(sw) * dist)
         wantLook = new THREE.Vector3(this.px + Math.sin(sw) * lead, this.py + 1.25, this.pz + Math.cos(sw) * lead)
         const g = this.world.ground(wantPos.x, wantPos.z)
         if (wantPos.y < g + 1.8) wantPos.y = g + 1.8
         this.frameW = damp(this.frameW, blockedAt(sw), 3, dt)
         wantPos.y += this.frameW
+      }
+      // looking up drops the camera and lifts its eye; looking down raises it
+      if (this.lookPitch > 0) wantPos.y += this.lookPitch * 6.5
+      else {
+        wantPos.y = Math.max(wantPos.y + this.lookPitch * 3.4, this.world.ground(wantPos.x, wantPos.z) + 0.7)
+        wantLook.y -= this.lookPitch * 11
       }
       // the dog in frame pulls the composition toward him
       const toDog = new THREE.Vector3(this.dog.x - this.px, 0, this.dog.z - this.pz)
@@ -1609,6 +1752,7 @@ export class Game {
     }
     cam.position.copy(this.camPos)
     cam.lookAt(this.camLook)
+    this.viewYaw = Math.atan2(this.camLook.x - this.camPos.x, this.camLook.z - this.camPos.z)
     // nothing past the fog is drawn; the sky rides with the camera
     for (const m of this.nearOnly) {
       const bs = (m as THREE.InstancedMesh).boundingSphere ?? m.geometry.boundingSphere
@@ -1672,8 +1816,8 @@ export class Game {
       const l = Math.hypot(wx0, wz0) || 1
       const wx = l < 0.8 ? 0 : wx0 / l
       const wz = l < 0.8 ? 0 : wz0 / l
-      const cy = Math.cos(this.camYaw)
-      const sy = Math.sin(this.camYaw)
+      const cy = Math.cos(this.viewYaw)
+      const sy = Math.sin(this.viewYaw)
       input.move.x = -wx * cy + wz * sy
       input.move.z = wx * sy + wz * cy
       this.update(dt)

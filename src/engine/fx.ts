@@ -147,12 +147,12 @@ export class Prints {
 
 export class Rings {
   group = new THREE.Group()
-  private rings: { m: THREE.Mesh; t: number; active: boolean }[] = []
+  private rings: { m: THREE.Mesh; t: number; active: boolean; size: number }[] = []
 
   constructor() {
     const geo = new THREE.RingGeometry(0.9, 1, 48)
     geo.rotateX(-Math.PI / 2)
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 10; i++) {
       const m = new THREE.Mesh(
         geo,
         new THREE.MeshBasicMaterial({ color: '#FFF8E8', transparent: true, opacity: 0, depthWrite: false }),
@@ -160,15 +160,17 @@ export class Rings {
       m.visible = false
       m.renderOrder = 5
       this.group.add(m)
-      this.rings.push({ m, t: 0, active: false })
+      this.rings.push({ m, t: 0, active: false, size: 1 })
     }
   }
 
-  emit(x: number, y: number, z: number, delay = 0) {
+  /** `size` scales the ring: the dog's answer is drawn large enough to see from where the boy stands. */
+  emit(x: number, y: number, z: number, delay = 0, size = 1) {
     const r = this.rings.find((q) => !q.active)
     if (!r) return
     r.active = true
     r.t = -delay
+    r.size = size
     r.m.position.set(x, y + 0.08, z)
   }
 
@@ -177,10 +179,10 @@ export class Rings {
       if (!r.active) continue
       r.t += dt
       if (r.t < 0) continue
-      const k = r.t / 1.1
+      const k = r.t / (1.1 + (r.size - 1) * 0.25)
       r.m.visible = true
-      r.m.scale.setScalar(0.4 + k * 3.2)
-      ;(r.m.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - k) * 0.35
+      r.m.scale.setScalar((0.4 + k * 3.2) * r.size)
+      ;(r.m.material as THREE.MeshBasicMaterial).opacity = Math.max(0, 1 - k) * Math.min(0.8, 0.35 + (r.size - 1) * 0.15)
       if (k >= 1) {
         r.active = false
         r.m.visible = false

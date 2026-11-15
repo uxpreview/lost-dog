@@ -5,6 +5,7 @@
   "bed": "woods",
   "walkSpeed": 3.0,
   "gait": "tired",
+  "roam": 14,
   "surface": "needles",
   "prints": true,
   "whistle": "honest",

@@ -87,6 +87,8 @@ export interface Chapter {
   walkSpeed: number
   gait: 'light' | 'tired' | 'calm'
   surface: Surface
+  /** how far off the routes he may wander, in meters, where the land lets him (0 or absent: the routes only) */
+  roam?: number
   prints: boolean
   whistle: 'honest' | 'misleading' | 'companion'
   map: boolean
@@ -97,7 +99,8 @@ export interface Chapter {
   witnesses?: Witness[]
   disturbances?: { kind: 'crate' | 'pigeons' | 'basket' | 'cats' | 'broom'; at: P2 }[]
   falseSources?: { zone: [number, number, number]; answerAt: P3; cue: string }[]
-  cameras?: { trigger: [number, number, number]; position: P3; lookAt: P3; fov?: number }[]
+  /** framed shots. With `exit`, reaching it is a staged moment: the shot holds that many seconds and the chapter ends */
+  cameras?: { trigger: [number, number, number]; position: P3; lookAt: P3; fov?: number; exit?: number }[]
   props?: Record<string, unknown>[]
   life?: import('./life').LifeDef[]
   /** the town's ambient people: at a plan point, or along a walk (s meters, side -1/1, branch index or main) */

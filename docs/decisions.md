@@ -943,3 +943,73 @@ first thing underfoot now comes at 24 s (brush) and 30 s (the brook), was 22 s
 and 47 s; chapter median gap 2.3 s (was 3.6), longest 11 s, the chapter is
 3.6 s longer. The waterfall is a cascade down a 50 degree slope, not a plunge:
 the wall is not steep enough there for one.
+
+---
+
+# The first playtest by hand (November 2026)
+
+The human played the build and filed six things. Two were blockers. All six
+are answered here; `node tools/play.mjs <dir>` drives the game through each of
+them and prints what happened.
+
+## D66 — Walking is relative to what is on screen (fixes "stuck at the top of the hill")
+
+At the canyon rim a framed camera takes the picture, and the controls were
+still steering relative to the follow camera the player could no longer see.
+Forward was not forward. **Ruling:** movement is always relative to the camera
+as drawn (`viewYaw`, taken from the camera each frame), for the follow camera,
+its swing on cliff paths, framed shots and look-around alike.
+
+## D67 — A chapter can end on a picture (the rim)
+
+The canyon ended at a 7 m circle on the plateau that nothing pointed to. A
+framed camera may now carry `exit` (seconds): reaching it is a staged moment,
+letterboxed, controls off, the shot held and pushed in a little toward where
+the dog went, and then the chapter ends. The canyon's last shot is the town
+below with the dog on the path down, looking back, held 7 s, then the map.
+Nothing to find.
+
+## D68 — He can look around, and leave the path (amends D44; the human asked)
+
+**Look:** drag with the mouse, Q and E, the right stick, or a finger that
+starts in the upper 40 percent of a touchscreen (the rest still walks, so it
+is still one thumb). It is an offset on the follow camera that eases back
+behind him once he walks on, or after nine seconds standing. **Roam:** a
+chapter may set `roam` (meters): open ground that near its routes is
+walkable where the land allows, which means not a steep face, not water over
+0.45 m, not the sea, not inside the town walls, not a terrace kept for a
+staged moment. Canyon 15, woods 14, shore 12, town none (its lanes are its
+shape). The log, the plank and the fords are still the only ways over what
+they cross. Off the path the camera turns to the dog, which is the
+wayfinding. **Not built:** trees and boulders do not stop him.
+
+## D69 — The whistle answers where you can see it, and teaches itself
+
+"I don't understand the point of the whistle." It had no visible answer
+beyond birds, and nothing ever suggested pressing it. Now the answer draws
+rings on the ground where it came from, sized to be seen from where the boy
+stands, and **the view turns to it** for three seconds; in the town's false
+corners the view turns to the echo, so the whistle misleads the eye as well
+as the ear. And the button glows, with its key beside it, a few seconds after
+the dog first bolts and whenever he has been out of sight a while, three
+times at most. No text, no marker: the hint is on the control, not the world.
+
+## D70 — The day opens on the two of them (amends "no cutscene", story.md)
+
+"There should be some emotion" before being thrown in. Nine seconds, two
+shots, wordless, skippable with any input: close on the boy kneeling to the
+dog at the water's edge, the dog looking up at him; then the dog's play-bow
+and bounce with the canyon behind them; then the camera goes round behind
+him, the place name comes up, and the morning is the player's. The dog can
+be held for a staged moment (`DogActor.stage`), which is general. It shows
+what is about to be lost, which is all the setup this story needs; it says
+nothing about why he bolts.
+
+## D71 — Small things that were wrong
+
+The fallen pine sat 0.55 m higher than the route across it, so he walked
+through its middle: the log now lies with its top at the route's height and
+along it. The brush he pushes through was a patch of fat dark cones that
+shoved a meter and a half aside; it is tall pale grass and broom now. Ground
+tufts are fine blades the color of dry ground, bushes barely stir and barely
+give (`push` on the material), and the wind on low growth is roughly halved.

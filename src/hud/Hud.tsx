@@ -8,7 +8,7 @@ import type { CSSProperties } from 'react'
 import type { Game } from '../engine/game'
 import { CHAPTERS } from '../engine/game'
 import { useUI } from '../engine/store'
-import { input, requestWhistle, setJoy } from '../engine/input'
+import { input, requestWhistle, setJoy, isLookZone } from '../engine/input'
 import { audio } from '../engine/audio'
 import { COLLAR, PAL } from '../engine/palette'
 import { MapScreen } from './MapScreen'
@@ -257,6 +257,10 @@ function Legend({ touch }: { touch: boolean }) {
             <WhistleGlyph />
             <span>Whistle</span>
           </div>
+          <div className="legend-item">
+            <LookGlyph />
+            <span>Drag up top to look</span>
+          </div>
         </>
       ) : (
         <>
@@ -273,6 +277,10 @@ function Legend({ touch }: { touch: boolean }) {
             <kbd className="wide">F</kbd>
             <span>Whistle</span>
           </div>
+          <div className="legend-item">
+            <LookGlyph />
+            <span>Drag to look</span>
+          </div>
         </>
       )}
     </div>
@@ -281,10 +289,10 @@ function Legend({ touch }: { touch: boolean }) {
 
 function WhistleButton({ touch }: { touch: boolean }) {
   const ready = useUI((s) => s.whistleReady)
-  const legend = useUI((s) => s.legend)
+  const hint = useUI((s) => s.whistleHint)
   return (
     <button
-      className={'whistle-btn' + (ready ? '' : ' cooling') + (touch ? ' touch' : '') + (legend && touch ? ' hint' : '')}
+      className={'whistle-btn' + (ready ? '' : ' cooling') + (touch ? ' touch' : '') + (hint ? ' hint' : '')}
       aria-label="Whistle"
       onPointerDown={(e) => {
         e.stopPropagation()
@@ -294,6 +302,7 @@ function WhistleButton({ touch }: { touch: boolean }) {
       }}
     >
       <WhistleGlyph />
+      {hint && !touch && <kbd className="whistle-key">F</kbd>}
     </button>
   )
 }
@@ -307,6 +316,8 @@ function Joystick() {
       if (e.pointerType !== 'touch' || id.current !== null) return
       if ((e.target as HTMLElement).closest('button')) return
       if (e.clientX < window.innerWidth * 0.32 && e.clientY > window.innerHeight * 0.6) return
+      // the upper part of the screen looks around (input.ts); the rest walks
+      if (isLookZone(e.clientY)) return
       id.current = e.pointerId
       setSt({ ox: e.clientX, oy: e.clientY, x: 0, y: 0 })
       setJoy(true, 0, 0)
@@ -455,6 +466,15 @@ function Arrow() {
   return (
     <svg className="arrow" viewBox="0 0 28 12" width="28" height="12" aria-hidden>
       <path d="M1 6h24M20 1.5 25.5 6 20 10.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function LookGlyph() {
+  return (
+    <svg viewBox="0 0 32 32" width="24" height="24" aria-hidden>
+      <path d="M4 16c3.5-5 7.5-7.5 12-7.5S24.500 11 28 16c-3.500 5-7.500 7.500-12 7.500S7.500 21 4 16Z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <circle cx="16" cy="16" r="3.4" fill="currentColor" />
     </svg>
   )
 }
